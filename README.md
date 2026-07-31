@@ -43,17 +43,17 @@
 - **調整順序**：拖曳圖示
 - **設定**：點齒輪可切換主題、自訂面板顏色
 
-## 權限說明
+## Permissions
 
-| 權限 | 用途 |
+| Permission | Purpose |
 |---|---|
-| `sidePanel` | 在瀏覽器側邊欄顯示網站 |
-| `declarativeNetRequest` | 靜態/動態規則，移除 X-Frame-Options 與 CSP 標頭，讓網站能被嵌入側邊欄 |
-| `storage` | 儲存網站列表、順序與主題設定（僅存本機） |
-| `tabs` | 取得目前分頁資訊以加入側邊欄 |
-| `scripting` | 在側邊欄關閉時注入停靠欄（rail） |
+| `sidePanel` | Display websites in the browser's native side panel |
+| `declarativeNetRequest` | Static/dynamic rules that strip X-Frame-Options and CSP headers so websites can be embedded in the side panel |
+| `storage` | Store the site list, order, and theme settings (local only) |
+| `tabs` | Read the current tab's URL/title to add it to the rail |
+| `scripting` | Inject the rail into the page when the side panel is closed |
 
-本擴展**不收集、不上傳任何使用者資料**，所有資料僅儲存在本機。
+This extension **does not collect or upload any user data**. Everything is stored locally on your device.
 
 ## 開發
 
