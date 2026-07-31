@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sidebarr 側邊欄</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div id="app">
+    <main id="main">
+      <iframe id="site-frame" src=""></iframe>
+      <div id="empty-state">
+        <p>尚未開啟網站</p>
+        <p class="sub">點擊右側網站的圖示即可在側邊欄開啟</p>
+      </div>
+      <div id="loading-bar" class="hidden"></div>
+    </main>
+
+    <nav id="rail">
+      <div id="site-list"></div>
+      <button class="btn" id="btn-add" title="將目前分頁加入側邊欄">
+        <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3.2v9.6M3.2 8h9.6"/></svg>
+      </button>
+      <button class="btn" id="btn-close-panel" title="關閉側邊欄">
+        <svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+      </button>
+      <button class="btn" id="btn-collapse" title="收回側邊欄">
+        <svg id="collapse-icon" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.2l4.8 4.8L6 12.8"/></svg>
+      </button>
+      <button class="btn" id="btn-gear" title="設定">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </nav>
+
+    <div id="settings">
+      <div class="s-title">面板顏色</div>
+      <div class="opt-row">
+        <button class="opt" data-theme="auto">自動</button>
+        <button class="opt" data-theme="light">淺色</button>
+        <button class="opt" data-theme="dark">深色</button>
+      </div>
+      <label class="custom">
+        <input type="color" value="#f2f3f5">
+        <span>自訂顏色</span>
+      </label>
+    </div>
+
+    <div id="toast"></div>
+  </div>
+  <script src="sidepanel.js"></script>
+</body>
+</html>
