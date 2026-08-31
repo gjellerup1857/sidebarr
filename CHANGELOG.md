@@ -4,6 +4,25 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 `2026.0.x`。
 
+## [2026.0.8] - 2026-08-31
+
+### 🐞 修正
+
+#### 1. 關閉側邊欄後面板必定保留（`>` / `X`）
+- **問題**：側邊欄開啟時點擊 `sidepanel` 內的 `>`（收合）與 `X`（關閉）後，`44px` 常駐面板偶發消失
+- **修復**：`background.js:261` `ensurePageRail()` 改為對**同視窗所有 `http(s)` 分頁**批次 `executeScript`/`insertCSS`，並 `set({panelOpen:false})` 確保儲存狀態一致；`chrome.storage.onChanged` 已注入的頁面立即透過 `show()` 重顯 Rail，`init()` 新開分頁讀 `panelOpen:false` 亦顯示。`closePanel()` 與 `onClosed` 皆走此可靠路徑
+
+#### 2. 部分網頁被面板遮擋（`fixed` 導航列）
+- **根因**：`html.sbx-reserve body {margin-right:44px}` 僅推移文件流，`position:fixed; left:0; right:0; width:100vw` 的頂部導航仍以視窗寬度計算而被 `44px` Rail 覆蓋
+- **修復**：
+  - `content.css:32` 新增 `html.sbx-reserve {--sbx-rail-width:44px}` 與 `body {box-sizing:border-box}`，保留 `margin-right` 為主方案
+  - `content.js:158,233` 新增 **動態 `fixed` 修正引擎**：`fixedElements:Map` + `isFixedOrSticky` / `shouldAdjustFixed`（全寬且貼右、高度 <35% 視窗的固定頭）+ `adjustFixedElements()` 對命中元素 `style.setProperty('right','44px','important')` 與 `width/max-width:calc(100vw - 44px)`，並在 `show()` / `panelOpen` 切換時自動還原；`scheduleAdjustFixed` 以 `requestAnimationFrame` 去抖，`setupFixedObserver()` 以 `MutationObserver` + `resize`/`scroll` 監聽動態插入的固定元素
+
+#### 3. 其他
+- `manifest.json:4` 版本 `2026.0.7` → `2026.0.8`
+
+---
+
 ## [2026.0.7] - 2026-08-31
 
 ### 概述

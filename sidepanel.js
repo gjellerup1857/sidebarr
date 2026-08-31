@@ -94,6 +94,8 @@ function shortcutConflicts(combo) {
 const siteList = document.getElementById('site-list');
 const siteFrame = document.getElementById('site-frame');
 const emptyState = document.getElementById('empty-state');
+const embedError = document.getElementById('embed-error');
+const openExternalBtn = document.getElementById('btn-open-external');
 const loadingBar = document.getElementById('loading-bar');
 const settingsEl = document.getElementById('settings');
 const gearBtn = document.getElementById('btn-gear');
@@ -152,7 +154,11 @@ function renderRail() {
       if (!img.dataset.fb) {
         img.dataset.fb = '1';
         try {
-          img.src = 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(new URL(site.url).hostname) + '&sz=64';
+          if (site.url && site.url.startsWith('chrome-extension://')) {
+            img.src = DEFAULT_FAVICON;
+          } else {
+            img.src = 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(new URL(site.url).hostname) + '&sz=64';
+          }
         } catch (e) {
           img.src = DEFAULT_FAVICON;
         }
@@ -241,14 +247,58 @@ async function toggleSite(id) {
   }
 }
 
+function hideEmbedError() {
+  if (embedError) embedError.classList.add('hidden');
+}
+function showEmbedError(url) {
+  hideEmbedError();
+  emptyState.classList.add('hidden');
+  if (embedError) embedError.classList.remove('hidden');
+  loadingBar.classList.add('hidden');
+}
+if (openExternalBtn) {
+  openExternalBtn.addEventListener('click', () => {
+    const site = sites.find((s) => s.id === activeSiteId);
+    const url = site ? site.url : null;
+    if (url) chrome.tabs.create({ url }).catch(() => {});
+  });
+}
+function isExtensionUrl(url) {
+  return typeof url === 'string' && url.startsWith('chrome-extension://');
+}
+
 async function loadFrame(siteId) {
   const site = sites.find((s) => s.id === siteId);
   if (!site) return;
   activeSiteId = siteId;
   emptyState.classList.add('hidden');
-  if (siteFrame.src !== site.url) {
-    loadingBar.classList.remove('hidden');
-    siteFrame.src = site.url;
+  hideEmbedError();
+  // chrome-extension 頁面嘗試直接嵌入，若對方未宣告 web_accessible_resources 會被瀏覽器阻擋，顯示備援提示
+  if (isExtensionUrl(site.url)) {
+    // 先嘗試載入，3 秒後若仍無法存取則顯示錯誤（跨擴充功能限制）
+    if (siteFrame.src !== site.url) {
+      loadingBar.classList.remove('hidden');
+      siteFrame.src = site.url;
+    }
+    // 延遲檢測：若 iframe 被阻擋，Chrome 會顯示錯誤頁，contentWindow 無法存取
+    setTimeout(() => {
+      if (activeSiteId !== siteId) return;
+      try {
+        // 嘗試存取，若成功且 href 仍為目標 URL 則視為載入成功
+        const href = siteFrame.contentWindow.location.href;
+        if (href && href.startsWith('chrome-extension://')) {
+          hideEmbedError();
+          loadingBar.classList.add('hidden');
+        }
+      } catch (e) {
+        // 跨來源無法存取，無法判斷，改用逾時顯示備援（若 1.5s 後仍未觸發 load 隱藏，則視為失敗）
+      }
+    }, 1200);
+  } else {
+    if (siteFrame.src !== site.url) {
+      loadingBar.classList.remove('hidden');
+      siteFrame.src = site.url;
+    }
   }
   renderRail();
 }
@@ -256,6 +306,7 @@ async function loadFrame(siteId) {
 function loadGoogle() {
   activeSiteId = 'google';
   emptyState.classList.add('hidden');
+  hideEmbedError();
   if (siteFrame.src !== GOOGLE_URL) {
     loadingBar.classList.remove('hidden');
     siteFrame.src = GOOGLE_URL;
@@ -266,6 +317,7 @@ function loadGoogle() {
 function showEmpty() {
   activeSiteId = null;
   siteFrame.src = '';
+  hideEmbedError();
   emptyState.classList.remove('hidden');
   renderRail();
 }
@@ -652,6 +704,44 @@ function toast(msg) {
 
 siteFrame.addEventListener('load', () => {
   loadingBar.classList.add('hidden');
+  const site = sites.find((s) => s.id === activeSiteId);
+  if (site && isExtensionUrl(site.url)) {
+    try {
+      const href = siteFrame.contentWindow.location.href;
+      if (!href || href === 'about:blank' || href.startsWith('chrome-error://') || href.startsWith('chrome://')) {
+        showEmbedError(site.url);
+      } else {
+        // 嘗試進一步檢查是否為阻擋頁（跨擴充功能限制時，雖然 href 仍為原 URL，但內容為錯誤頁且無法存取）
+        setTimeout(() => {
+          try {
+            const doc = siteFrame.contentDocument;
+            if (doc && doc.body && doc.body.innerText && /ERR_BLOCKED|無法顯示|blocked by response|not allowed to load/i.test(doc.body.innerText)) {
+              showEmbedError(site.url);
+            } else {
+              hideEmbedError();
+            }
+          } catch (_) {
+            // 跨來源無法讀取，假設若 1.5s 後仍無明確成功，保留目前顯示；若對方未開放 web_accessible_resources，通常會顯示空白或錯誤，超時後提示
+          }
+        }, 600);
+      }
+    } catch (e) {
+      // 跨來源無法判斷，延遲後若仍為空白則提示備援
+      setTimeout(() => {
+        try {
+          const doc = siteFrame.contentDocument;
+          if (doc && doc.body && /ERR_BLOCKED/i.test(doc.body.innerText)) showEmbedError(site.url);
+        } catch (_) {}
+      }, 800);
+    }
+  } else {
+    hideEmbedError();
+  }
+});
+siteFrame.addEventListener('error', () => {
+  loadingBar.classList.add('hidden');
+  const site = sites.find((s) => s.id === activeSiteId);
+  if (site && isExtensionUrl(site.url)) showEmbedError(site.url);
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {

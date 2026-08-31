@@ -14,6 +14,12 @@
         <p>尚未開啟網站</p>
         <p class="sub">點擊右側網站的圖示即可在側邊欄開啟</p>
       </div>
+      <div id="embed-error" class="hidden">
+        <p>此頁面無法直接嵌入側邊欄</p>
+        <p class="sub">該擴充功能頁面未開放給其他擴充功能嵌入（需對方在 manifest 宣告 web_accessible_resources）</p>
+        <button id="btn-open-external" class="embed-btn">在新分頁開啟</button>
+        <p class="sub" style="margin-top:8px; font-size:10px; opacity:0.5;">chrome-extension:// 頁面受瀏覽器安全限制</p>
+      </div>
       <div id="loading-bar" class="hidden"></div>
     </main>
 

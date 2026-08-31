@@ -161,6 +161,7 @@
       root.classList.add('sbx-hidden');
       document.documentElement.classList.add('sbx-fullscreen-active');
       document.documentElement.classList.remove('sbx-reserve');
+      if (typeof adjustFixedElements === 'function') adjustFixedElements();
       return;
     }
     document.documentElement.classList.remove('sbx-fullscreen-active');
@@ -174,6 +175,94 @@
       root.classList.remove('sbx-hidden');
       document.documentElement.classList.add('sbx-reserve');
     }
+    if (typeof scheduleAdjustFixed === 'function') scheduleAdjustFixed();
+  }
+
+  // --- 修正部分網頁被面板遮擋（fixed/sticky 全寬元素）---
+  const fixedElements = new Map();
+  let fixedObserver = null;
+  let fixedRaf = null;
+
+  function isFixedOrSticky(el) {
+    try {
+      const pos = getComputedStyle(el).position;
+      return pos === 'fixed' || pos === 'sticky';
+    } catch (e) { return false; }
+  }
+
+  function shouldAdjustFixed(el) {
+    if (el.id === 'sbx-rail-root' || (el.closest && el.closest('#sbx-rail-root'))) return false;
+    try {
+      const style = getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      const vw = window.innerWidth;
+      if (rect.height > window.innerHeight * 0.35) return false;
+      if (rect.width < vw * 0.5) return false;
+      const touchesRight = Math.abs(rect.right - vw) < 3;
+      const isFullWidth = (style.left === '0px' && style.right === '0px') || style.width === '100vw' || Math.abs(rect.width - vw) < 3;
+      return touchesRight && isFullWidth;
+    } catch (e) { return false; }
+  }
+
+  function adjustFixedElements() {
+    if (panelOpen || isFullscreenHidden) {
+      fixedElements.forEach((original, el) => {
+        try {
+          if (original.right !== null) el.style.setProperty('right', original.right);
+          else el.style.removeProperty('right');
+          if (original.width !== null) el.style.setProperty('width', original.width);
+          else el.style.removeProperty('width');
+          if (original.maxWidth !== null) el.style.setProperty('max-width', original.maxWidth);
+          else el.style.removeProperty('max-width');
+        } catch (e) {}
+      });
+      fixedElements.clear();
+      return;
+    }
+    try {
+      const all = document.querySelectorAll('body *');
+      for (const el of all) {
+        if (fixedElements.has(el)) continue;
+        if (!isFixedOrSticky(el)) continue;
+        if (!shouldAdjustFixed(el)) continue;
+        const inlineRight = el.style.getPropertyValue('right');
+        const inlineWidth = el.style.getPropertyValue('width');
+        const inlineMaxWidth = el.style.getPropertyValue('max-width');
+        fixedElements.set(el, {
+          right: inlineRight ? inlineRight : null,
+          width: inlineWidth ? inlineWidth : null,
+          maxWidth: inlineMaxWidth ? inlineMaxWidth : null
+        });
+        try {
+          el.style.setProperty('right', '44px', 'important');
+          const cw = getComputedStyle(el).width;
+          if (cw === window.innerWidth + 'px' || el.style.width === '100vw' || getComputedStyle(el).width === '100vw') {
+            el.style.setProperty('width', 'calc(100vw - 44px)', 'important');
+            el.style.setProperty('max-width', 'calc(100vw - 44px)', 'important');
+          } else {
+            el.style.setProperty('max-width', 'calc(100vw - 44px)', 'important');
+          }
+        } catch (e) {}
+      }
+    } catch (e) {}
+  }
+
+  function scheduleAdjustFixed() {
+    if (fixedRaf) cancelAnimationFrame(fixedRaf);
+    fixedRaf = requestAnimationFrame(() => {
+      fixedRaf = null;
+      adjustFixedElements();
+    });
+  }
+
+  function setupFixedObserver() {
+    if (fixedObserver) return;
+    try {
+      fixedObserver = new MutationObserver(scheduleAdjustFixed);
+      fixedObserver.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+      window.addEventListener('resize', scheduleAdjustFixed);
+      window.addEventListener('scroll', scheduleAdjustFixed, { passive: true });
+    } catch (e) {}
   }
 
   function getFullscreenElement() {
@@ -284,7 +373,11 @@
         if (!img.dataset.fb) {
           img.dataset.fb = '1';
           try {
-            img.src = 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(new URL(site.url).hostname) + '&sz=64';
+            if (site.url && site.url.startsWith('chrome-extension://')) {
+              img.src = DEFAULT_FAVICON;
+            } else {
+              img.src = 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(new URL(site.url).hostname) + '&sz=64';
+            }
           } catch (e) {
             img.src = DEFAULT_FAVICON;
           }
@@ -672,7 +765,9 @@
     applyTheme();
     initShortcut();
     show();
+    setupFixedObserver();
     setTimeout(checkFullscreenState, 300);
+    setTimeout(scheduleAdjustFixed, 600);
   }
 
   init();

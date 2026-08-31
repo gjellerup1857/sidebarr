@@ -29,8 +29,13 @@
   transition-delay: 0.16s;
 }
 
+html.sbx-reserve {
+  --sbx-rail-width: 44px;
+}
+
 html.sbx-reserve body {
-  margin-right: 44px !important;
+  margin-right: var(--sbx-rail-width) !important;
+  box-sizing: border-box !important;
 }
 
 #sbx-rail-root *,

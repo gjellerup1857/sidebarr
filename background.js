@@ -260,13 +260,29 @@ async function handleCopyText(text, sender) {
 
 async function ensurePageRail(windowId) {
   try {
-    const opts = windowId != null
-      ? { active: true, windowId }
-      : { active: true, lastFocusedWindow: true };
-    const [tab] = await chrome.tabs.query(opts);
-    if (!tab || !tab.id || !tab.url || !/^https?:/.test(tab.url)) return;
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
-    await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['content.css'] });
+    // 確保關閉側邊欄後，Rail 一定留在瀏覽器上：
+    // 1) 對當前視窗的所有 http(s) 分頁嘗試注入（避免僅 active 分頁生效）
+    // 2) 同時觸發儲存變更，讓已注入的頁面透過 onChanged 立即 show()
+    await chrome.storage.local.set({ panelOpen: false }).catch(() => {});
+    let tabs = [];
+    try {
+      if (windowId != null) {
+        tabs = await chrome.tabs.query({ windowId });
+      } else {
+        tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      }
+    } catch (e) { tabs = []; }
+    // 若 windowId 指定，優先處理該視窗全部 http(s) 分頁，否則僅 active
+    const targets = windowId != null ? tabs.filter(t => t.url && /^https?:/.test(t.url)) : tabs.slice(0,1).filter(t => t.url && /^https?:/.test(t.url));
+    for (const tab of targets) {
+      if (!tab.id || !tab.url) continue;
+      if (/^chrome-extension:/.test(tab.url)) continue;
+      try {
+        await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+        await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['content.css'] });
+      } catch (e) {}
+    }
+    // 若沒有可注入的 tab，仍確保儲存狀態已為 false，讓下次開啟的 http(s) 頁面 init 時顯示 Rail
   } catch (e) {}
 }
 
@@ -283,8 +299,16 @@ async function expandGoogle() {
 async function addCurrentSite() {
   try {
     const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-    if (!tab || !tab.url || !/^https?:/.test(tab.url)) {
+    if (!tab || !tab.url) {
       return { success: false, error: '目前分頁不支援加入' };
+    }
+    // 允許 http/https 與 chrome-extension 頁面（如 ollbabafopjfidmpdikdnokhhfefacpl/fullpage.html）
+    // 瀏覽器內部頁面 chrome://, edge://, brave://, about: 仍不支援
+    if (/^(chrome|edge|brave|about):/.test(tab.url)) {
+      return { success: false, error: '瀏覽器內部頁面不支援加入' };
+    }
+    if (!/^(https?|chrome-extension):/.test(tab.url)) {
+      return { success: false, error: '目前分頁不支援加入（僅支援 http/https 與擴充功能頁面）' };
     }
     return {
       success: true,
@@ -332,6 +356,8 @@ async function getThemeColor() {
 
 async function addDynamicRule(url) {
   try {
+    // chrome-extension:// 等非 http(s) 頁面不需要去除 X-Frame-Options
+    if (!/^https?:/.test(url)) return { success: true, ruleId: null };
     const hostname = new URL(url).hostname;
     const existingRules = await chrome.declarativeNetRequest.getDynamicRules();
     if (existingRules.some((r) => r.condition.urlFilter === `||${hostname}`)) {

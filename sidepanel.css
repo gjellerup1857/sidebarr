@@ -70,6 +70,47 @@ body {
   opacity: 0.6;
 }
 
+#embed-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+  text-align: center;
+  color: var(--sb-text);
+  background: var(--sb-bg);
+}
+
+#embed-error.hidden {
+  display: none;
+}
+
+#embed-error .sub {
+  font-size: 11px;
+  opacity: 0.6;
+  max-width: 240px;
+}
+
+.embed-btn {
+  margin-top: 6px;
+  padding: 7px 14px;
+  border: 1px solid var(--sb-border);
+  background: var(--sb-bg);
+  border-radius: 8px;
+  color: var(--sb-text);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.embed-btn:hover {
+  background: var(--sb-hover);
+}
+
 #loading-bar {
   position: absolute;
   bottom: 0;
