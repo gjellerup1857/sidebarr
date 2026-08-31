@@ -4,6 +4,22 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 `2026.0.x`。
 
+## [2026.0.10] - 2026-08-31
+
+### 🐞 修正
+
+#### 1. Gemini 側邊欄對話區域溢出側邊欄
+- **問題**：Gemini 網頁於側邊欄 `iframe`（`~360px`）開啟時，`nav bar` 正常 RWD，但對話區域偶發寬出超出側邊欄，導致橫向滾動與內容被切
+- **根因**：Gemini 對話容器及內部 `pre`/`code`/`table` 使用 `min-width:auto`（flex 預設不收縮）與 `white-space:pre` / `min-width:600px`，在窄 `iframe` 內不收縮；長程式碼/表格亦以 `max-content` 撐寬
+- **修復**：
+  - 新增 `iframe-layout-fix.js` / `.css`（`content_scripts` `matches:<all_urls>` `all_frames:true` `document_idle`）：當 `window.self!==window.top && innerWidth<750`（側邊欄內）時注入
+    - CSS（`@media (max-width:700px)`）：`html,body{max-width:100%; overflow-x:hidden}`；所有 `div/main/section/c-wiz` 強制 `min-width:0; max-width:100%; box-sizing:border-box`；`pre/code` 改 `pre-wrap/break-word` 且 `overflow-x:auto`；`table` 改 `display:block` 橫向捲動；Gemini 特定容器 `main/[role="main"]/c-wiz/[data-test-id="conversation"]/.conversation-container` 強制 `width:100%; min-width:0; overflow-x:hidden`
+    - JS：`fixOverflowElements()` 掃描 `body *` 中 `rect.width > vw` 或 `right > vw` 的溢出元素，標記 `dataset.sbxFixed` 後 `max-width:100%`，`pre/code/table` 另加 `white-space/break`；對 `main/c-wiz` 等強制 `min-width:0`；`MutationObserver` + `ResizeObserver` + `resize` 監聽動態對話，初載後 `800/2000/4000ms` 延遲再修復
+  - `sidepanel.css:35` `#main` 新增 `overflow-x:hidden; contain:layout style`，`#site-frame` 新增 `max-width:100%; overflow-x:hidden` 防止外層溢出
+- `manifest.json:4` 版本 `2026.0.9` → `2026.0.10`
+
+---
+
 ## [2026.0.9] - 2026-08-31
 
 ### 🐞 修正

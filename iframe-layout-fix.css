@@ -1,0 +1,60 @@
+/* Gemini / ChatGPT 等 AI 站點在窄側邊欄 iframe 內的版面修正 */
+/* 僅在窄視窗（側邊欄）生效，避免影響正常分頁 */
+@media (max-width: 700px) {
+  html, body {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    overflow-wrap: break-word !important;
+  }
+
+  /* 讓 flex 容器可收縮，避免 min-width:auto 導致溢出 */
+  div, main, section, article, c-wiz, [role="main"], [data-test-id] {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 通用：所有元素不超過視窗寬 */
+  * {
+    box-sizing: border-box !important;
+  }
+
+  /* 長內容：code / pre / table / 圖片 */
+  pre, code, pre code, .markdown, .markdown pre {
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+  }
+
+  table {
+    display: block !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+  }
+
+  img, video, iframe, canvas, svg {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* Gemini 特定容器（多版本相容，含常見的 c-wiz / bard / gemini 選擇器） */
+  main, [role="main"], c-wiz, div[jsname], [data-test-id="conversation"], [data-test-id="chat-history"],
+  .conversation-container, .chat-container, .message-container, .response-container,
+  .model-response, .model-response-text, .user-query, .chat-history, .chat-window,
+  .conversation, .chat, [class*="conversation"], [class*="chat-history"], [class*="response"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Gemini 的輸入框與工具列 */
+  [class*="input"], [class*="prompt"], [class*="composer"], [class*="bottom"] {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
