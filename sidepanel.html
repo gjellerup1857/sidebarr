@@ -9,7 +9,7 @@
 <body>
   <div id="app">
     <main id="main">
-      <iframe id="site-frame" src=""></iframe>
+      <iframe id="site-frame" src="" allowfullscreen allow="clipboard-read *; clipboard-write *; fullscreen *; autoplay *; encrypted-media *; picture-in-picture *; web-share *"></iframe>
       <div id="empty-state">
         <p>尚未開啟網站</p>
         <p class="sub">點擊右側網站的圖示即可在側邊欄開啟</p>
@@ -40,10 +40,24 @@
         <button class="opt" data-theme="light">淺色</button>
         <button class="opt" data-theme="dark">深色</button>
       </div>
-      <label class="custom">
-        <input type="color" value="#f2f3f5">
-        <span>自訂顏色</span>
+      <label class="custom" id="custom-bg">
+        <input type="color" value="#f2f3f5" id="bg-color">
+        <span>自訂面板顏色</span>
       </label>
+      <div class="s-title" style="margin-top:10px">文字 / 圖示顏色</div>
+      <label class="custom" id="custom-text">
+        <input type="color" value="#5f6368" id="text-color">
+        <span>自訂文字 / 圖示顏色</span>
+      </label>
+      <button type="button" class="shortcut-link" id="reset-text" style="margin-top:4px">重設為自動</button>
+      <div class="s-title shortcut-title">快捷鍵</div>
+      <div class="shortcut-row">
+        <button type="button" class="shortcut-input unset" id="shortcut-input">未設定</button>
+        <button type="button" class="shortcut-clear" id="shortcut-clear" title="清除快捷鍵">✕</button>
+      </div>
+      <div class="shortcut-hint" id="shortcut-hint"></div>
+      <div class="shortcut-err hidden" id="shortcut-err"></div>
+      <button type="button" class="shortcut-link" id="shortcut-link">修改瀏覽器預設快捷鍵…</button>
     </div>
 
     <div id="toast"></div>

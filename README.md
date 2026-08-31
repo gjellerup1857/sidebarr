@@ -13,6 +13,7 @@ A Chromium extension that gives any webpage a native-feeling side panel. A 44px 
 - **Drag to reorder**: drag site icons to rearrange them
 - **Right-click to remove**: right-click an icon to remove it from the rail
 - **Themes & custom colors**: auto (follows the browser) / light / dark / custom color
+- **Keyboard shortcut**: press `Ctrl/Cmd+Shift+S` to toggle the panel (opens Google when closed, collapses back to the rail when open); set your own shortcut in Settings — conflicting combos are rejected before saving
 
 ## Installation (Developer Mode)
 
@@ -38,6 +39,7 @@ Version requirements: `chrome.sidePanel.close()` requires Chrome 141+; `chrome.s
 
 - **When the side panel is closed**: a 44px dock is reserved on the right side of the page — click an icon to open the side panel
 - **When the side panel is open**: click `X` or `<` to collapse back to the dock
+- **Keyboard shortcuts**: `Ctrl/Cmd+Shift+S` toggles the side panel; in Settings (gear icon) you can record your own shortcut — the rail must be present on the page for custom shortcuts to work
 - **Add a site**: browse to the site → click `+`
 - **Remove a site**: right-click its icon
 - **Reorder**: drag the icons

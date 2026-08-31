@@ -6,7 +6,8 @@
 
 :root {
   --sb-bg: #f2f3f5;
-  --sb-text: #202124;
+  --sb-text: #5f6368;
+  --sb-icon: #5f6368;
   --sb-accent: #5f6368;
   --sb-hover: rgba(0, 0, 0, 0.06);
   --sb-border: rgba(0, 0, 0, 0.08);
@@ -200,6 +201,10 @@ body {
   box-shadow: 0 2px 0 0 var(--sb-accent);
 }
 
+#rail svg {
+  stroke: var(--sb-icon);
+}
+
 #btn-close-panel {
   display: flex;
 }
@@ -209,6 +214,9 @@ body {
   right: 50px;
   bottom: 46px;
   width: 168px;
+  max-height: 78vh;
+  overflow-y: auto;
+  scrollbar-width: none;
   background: var(--sb-bg);
   border: 1px solid var(--sb-border);
   border-radius: 12px;
@@ -221,6 +229,10 @@ body {
 
 #settings.show {
   display: block;
+}
+
+#settings::-webkit-scrollbar {
+  display: none;
 }
 
 .s-title {
@@ -286,6 +298,100 @@ body {
   cursor: pointer;
 }
 
+.shortcut-title {
+  margin-top: 12px;
+}
+
+.shortcut-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.shortcut-input {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 6px;
+  border: 1px solid var(--sb-border);
+  background: transparent;
+  border-radius: 8px;
+  color: var(--sb-text);
+  font-size: 11px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.shortcut-input:hover {
+  background: var(--sb-hover);
+}
+
+.shortcut-input.recording {
+  border-color: var(--sb-accent);
+}
+
+.shortcut-input.unset {
+  opacity: 0.55;
+}
+
+.shortcut-clear {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border: 1px solid var(--sb-border);
+  background: transparent;
+  border-radius: 8px;
+  color: var(--sb-text);
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  display: none;
+  transition: background 0.12s ease;
+}
+
+.shortcut-clear:hover {
+  background: var(--sb-hover);
+}
+
+.shortcut-hint {
+  margin-top: 6px;
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--sb-text);
+  opacity: 0.55;
+}
+
+.shortcut-err {
+  margin-top: 4px;
+  font-size: 10px;
+  line-height: 1.45;
+  color: #d93025;
+}
+
+.shortcut-err.hidden {
+  display: none;
+}
+
+.shortcut-link {
+  display: block;
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--sb-text);
+  font-size: 10px;
+  font-family: inherit;
+  opacity: 0.7;
+  text-decoration: underline;
+  cursor: pointer;
+  text-align: left;
+}
+
+.shortcut-link:hover {
+  opacity: 1;
+}
+
 #toast {
   position: fixed;
   right: 50px;
@@ -306,4 +412,23 @@ body {
 #toast.show {
   opacity: 1;
   transform: translateY(0);
+}
+
+#rail.sbx-fullscreen-hidden {
+  display: none !important;
+}
+
+html.sbx-fullscreen-active #rail,
+body.sbx-fullscreen-active #rail {
+  display: none !important;
+}
+
+html.sbx-fullscreen-active #settings,
+body.sbx-fullscreen-active #settings {
+  display: none !important;
+}
+
+html.sbx-fullscreen-active #main,
+body.sbx-fullscreen-active #main {
+  margin-right: 0 !important;
 }

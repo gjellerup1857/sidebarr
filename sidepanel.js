@@ -7,11 +7,89 @@ let sites = [];
 let activeSiteId = null;
 let theme = 'auto';
 let customColor = '#f2f3f5';
+let customTextColor = '';
 let dragId = null;
 let toastTimer = null;
 let winId = null;
+let isSpFullscreenHidden = false;
 
 const toSites = (v) => (Array.isArray(v) ? v.filter((s) => s && typeof s === 'object' && s.id) : []);
+
+const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform || '');
+
+const KEY_NAME_MAP = {
+  ' ': 'Space',
+  'ArrowLeft': 'Left',
+  'ArrowRight': 'Right',
+  'ArrowUp': 'Up',
+  'ArrowDown': 'Down',
+  ',': 'Comma',
+  '.': 'Period',
+  '/': 'Slash',
+  ';': 'Semicolon',
+  "'": 'Quote',
+  '[': 'BracketLeft',
+  ']': 'BracketRight',
+  '\\': 'Backslash',
+  '`': 'Backquote',
+  '-': 'Minus',
+  '=': 'Equal',
+  '+': 'Plus'
+};
+
+const RESERVED_SHORTCUTS = [
+  'Ctrl+T', 'Ctrl+W', 'Ctrl+N', 'Ctrl+Shift+N', 'Ctrl+Shift+T', 'Ctrl+Shift+W',
+  'Ctrl+Tab', 'Ctrl+Shift+Tab', 'Ctrl+1', 'Ctrl+2', 'Ctrl+3', 'Ctrl+4', 'Ctrl+5',
+  'Ctrl+6', 'Ctrl+7', 'Ctrl+8', 'Ctrl+9',
+  'Ctrl+L', 'Ctrl+E', 'Ctrl+D', 'Ctrl+Shift+D', 'Ctrl+H', 'Ctrl+J',
+  'Ctrl+Shift+I', 'Ctrl+Shift+J', 'Ctrl+Shift+C', 'Ctrl+Shift+O', 'Ctrl+Shift+M',
+  'Ctrl+Shift+B', 'Ctrl+Shift+Q', 'Ctrl+R', 'Ctrl+F5', 'Ctrl+F', 'Ctrl+F4',
+  'Ctrl+U', 'Ctrl+P', 'Ctrl+S', 'Ctrl+A', 'Ctrl+Z', 'Ctrl+Y', 'Ctrl+X', 'Ctrl+C',
+  'Ctrl+V', 'Ctrl+0', 'Ctrl++', 'Ctrl+=', 'Ctrl+-',
+  'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12',
+  'Alt+Left', 'Alt+Right', 'Alt+Home', 'Alt+D', 'Alt+E', 'Alt+F', 'Alt+Space',
+  'Cmd+T', 'Cmd+W', 'Cmd+N', 'Cmd+Shift+N', 'Cmd+Shift+T', 'Cmd+Shift+W',
+  'Cmd+Shift+P', 'Cmd+Shift+I', 'Cmd+Shift+J', 'Cmd+Shift+C', 'Cmd+Shift+H',
+  'Cmd+L', 'Cmd+D', 'Cmd+Shift+D', 'Cmd+H', 'Cmd+R', 'Cmd+Shift+R', 'Cmd+F',
+  'Cmd+P', 'Cmd+A', 'Cmd+Z', 'Cmd+Shift+Z', 'Cmd+X', 'Cmd+C', 'Cmd+V', 'Cmd+M',
+  'Cmd+Q', 'Cmd+Comma', 'Cmd+0', 'Cmd++', 'Cmd+=', 'Cmd+-',
+  'Cmd+Left', 'Cmd+Right', 'Cmd+Up', 'Cmd+Down', 'Cmd+1', 'Cmd+2', 'Cmd+3',
+  'Cmd+4', 'Cmd+5', 'Cmd+6', 'Cmd+7', 'Cmd+8', 'Cmd+9',
+  'Space', 'Shift+Space', 'Escape'
+];
+
+function normalizeCombo(combo) {
+  const parts = combo.split('+');
+  const mods = [];
+  const keys = [];
+  for (const p of parts) {
+    if (['Ctrl', 'Alt', 'Shift', 'Cmd', 'Win', 'MacCtrl'].includes(p)) mods.push(p);
+    else keys.push(p);
+  }
+  const order = ['Ctrl', 'Alt', 'Shift', 'Cmd', 'Win', 'MacCtrl'];
+  mods.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  return mods.concat(keys).join('+');
+}
+
+function comboFromEvent(e) {
+  if (e.key === 'Control' || e.key === 'Alt' || e.key === 'Shift' || e.key === 'Meta') return null;
+  const parts = [];
+  if (e.ctrlKey) parts.push('Ctrl');
+  if (e.altKey) parts.push('Alt');
+  if (e.shiftKey) parts.push('Shift');
+  if (e.metaKey) parts.push(IS_MAC ? 'Cmd' : 'Win');
+  if (parts.length === 0) return null;
+  let key = KEY_NAME_MAP[e.key] || e.key;
+  if (key.length === 1) key = key.toUpperCase();
+  parts.push(key);
+  return parts.join('+');
+}
+
+function shortcutConflicts(combo) {
+  const norm = normalizeCombo(combo);
+  const hit = RESERVED_SHORTCUTS.some((r) => normalizeCombo(r) === norm);
+  return hit ? '此快捷鍵與瀏覽器或其他擴充功能的快捷鍵衝突，無法使用' : null;
+}
 
 const siteList = document.getElementById('site-list');
 const siteFrame = document.getElementById('site-frame');
@@ -23,7 +101,17 @@ const closePanelBtn = document.getElementById('btn-close-panel');
 const collapseBtn = document.getElementById('btn-collapse');
 const collapseIcon = document.getElementById('collapse-icon');
 const addBtn = document.getElementById('btn-add');
-const colorInput = settingsEl.querySelector('.custom input');
+const colorInput = settingsEl.querySelector('#bg-color') || settingsEl.querySelector('#custom-bg input');
+const textColorInput = settingsEl.querySelector('#text-color') || settingsEl.querySelector('#custom-text input');
+const resetTextBtn = document.getElementById('reset-text');
+const shortcutInput = document.getElementById('shortcut-input');
+const shortcutClear = document.getElementById('shortcut-clear');
+const shortcutHint = document.getElementById('shortcut-hint');
+const shortcutErr = document.getElementById('shortcut-err');
+const shortcutLink = document.getElementById('shortcut-link');
+
+let shortcut = '';
+let recording = false;
 
 async function init() {
   try {
@@ -31,15 +119,18 @@ async function init() {
     winId = win ? win.id : null;
   } catch (e) {}
   try {
-    const res = await chrome.storage.local.get(['sites', 'activeSiteId', 'theme', 'customColor']);
+    const res = await chrome.storage.local.get(['sites', 'activeSiteId', 'theme', 'customColor', 'customTextColor', 'shortcut']);
     sites = toSites(res.sites);
     activeSiteId = res.activeSiteId || null;
     theme = res.theme || 'auto';
     customColor = res.customColor || '#f2f3f5';
+    customTextColor = res.customTextColor || '';
+    shortcut = res.shortcut || '';
   } catch (e) {}
   renderRail();
   renderThemeOptions();
   applyTheme();
+  initShortcut();
   if (activeSiteId && activeSiteId !== 'google') {
     loadFrame(activeSiteId);
   } else {
@@ -223,6 +314,9 @@ collapseBtn.addEventListener('click', () => {
 });
 
 gearBtn.addEventListener('click', () => {
+  if (settingsEl.classList.contains('show')) {
+    stopRecording();
+  }
   settingsEl.classList.toggle('show');
   gearBtn.classList.toggle('on', settingsEl.classList.contains('show'));
 });
@@ -232,6 +326,7 @@ document.addEventListener('click', (e) => {
       !settingsEl.contains(e.target) && !gearBtn.contains(e.target)) {
     settingsEl.classList.remove('show');
     gearBtn.classList.remove('on');
+    stopRecording();
   }
 });
 
@@ -262,11 +357,42 @@ colorInput.closest('.custom').addEventListener('click', async (e) => {
   }
 });
 
+if (textColorInput) {
+  textColorInput.addEventListener('input', async () => {
+    customTextColor = textColorInput.value;
+    await chrome.storage.local.set({ customTextColor }).catch(() => {});
+    renderThemeOptions();
+    applyTheme();
+  });
+  const textWrap = textColorInput.closest('.custom');
+  if (textWrap) {
+    textWrap.addEventListener('click', async (e) => {
+      if (e.target === textColorInput) return;
+      textColorInput.click();
+    });
+  }
+}
+
+if (resetTextBtn) {
+  resetTextBtn.addEventListener('click', async () => {
+    customTextColor = '';
+    await chrome.storage.local.set({ customTextColor: '' }).catch(() => {});
+    renderThemeOptions();
+    applyTheme();
+    toast('已重設文字顏色為自動');
+  });
+}
+
 function renderThemeOptions() {
   settingsEl.querySelectorAll('.opt').forEach((b) => {
     b.classList.toggle('on', theme === b.dataset.theme);
   });
   colorInput.closest('.custom').classList.toggle('on', theme === 'custom');
+  if (textColorInput) {
+    const hasCustomText = !!customTextColor;
+    textColorInput.closest('.custom').classList.toggle('on', hasCustomText);
+    if (resetTextBtn) resetTextBtn.style.display = hasCustomText ? 'block' : 'none';
+  }
 }
 
 async function applyTheme() {
@@ -284,16 +410,100 @@ async function applyTheme() {
     }
   }
   const dark = luminance(bg) < 0.5;
-  const text = dark ? '#d2d6dc' : '#202124';
+  const autoText = dark ? '#ffffff' : '#5f6368';
+  const isValidTextHex = customTextColor && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(customTextColor);
+  const text = isValidTextHex ? customTextColor : autoText;
   document.documentElement.style.setProperty('--sb-bg', bg);
   document.documentElement.style.setProperty('--sb-text', text);
+  document.documentElement.style.setProperty('--sb-icon', text);
   document.documentElement.style.setProperty('--sb-accent', text);
   document.documentElement.style.setProperty('--sb-hover', mix(bg, dark ? '#ffffff' : '#000000', dark ? 0.10 : 0.08));
   document.documentElement.style.setProperty('--sb-border', mix(bg, dark ? '#ffffff' : '#000000', 0.28));
   if (theme !== 'custom') {
-    colorInput.value = bg;
+    try { colorInput.value = bg; } catch (e) {}
+  } else {
+    try { colorInput.value = customColor; } catch (e) {}
+  }
+  if (textColorInput) {
+    try { textColorInput.value = isValidTextHex ? customTextColor : autoText; } catch (e) {}
   }
 }
+
+function renderShortcut() {
+  shortcutInput.textContent = shortcut || '未設定';
+  shortcutInput.classList.toggle('unset', !shortcut);
+  shortcutClear.style.display = shortcut ? 'inline-block' : 'none';
+  shortcutErr.classList.add('hidden');
+  shortcutErr.textContent = '';
+}
+
+function startRecording() {
+  recording = true;
+  shortcutInput.classList.add('recording');
+  shortcutInput.textContent = '按下快捷鍵…';
+  shortcutErr.classList.add('hidden');
+}
+
+function stopRecording() {
+  recording = false;
+  shortcutInput.classList.remove('recording');
+  renderShortcut();
+}
+
+async function initShortcut() {
+  renderShortcut();
+  try {
+    const res = await chrome.runtime.sendMessage({ type: 'getShortcutInfo' });
+    if (res && res.commandShortcut) {
+      shortcutHint.textContent = '預設：' + res.commandShortcut;
+    } else {
+      shortcutHint.textContent = '預設快捷鍵未指派（可能與其他擴充功能衝突），自訂快捷鍵僅在網頁有效';
+    }
+  } catch (e) {}
+}
+
+shortcutInput.addEventListener('click', () => {
+  if (recording) { stopRecording(); return; }
+  startRecording();
+});
+
+shortcutClear.addEventListener('click', async () => {
+  shortcut = '';
+  await chrome.storage.local.set({ shortcut: '' }).catch(() => {});
+  stopRecording();
+  toast('已清除快捷鍵');
+});
+
+shortcutLink.addEventListener('click', () => {
+  chrome.runtime.sendMessage({ type: 'openShortcutsPage' }).catch(() => {});
+});
+
+window.addEventListener('keydown', (e) => {
+  if (recording) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.key === 'Escape' || e.key === 'Dead') { stopRecording(); return; }
+    const combo = comboFromEvent(e);
+    if (!combo) return;
+    const conflict = shortcutConflicts(combo);
+    if (conflict) {
+      shortcutErr.textContent = conflict;
+      shortcutErr.classList.remove('hidden');
+      shortcutInput.textContent = '此快捷鍵已被占用';
+      return;
+    }
+    shortcut = combo;
+    chrome.storage.local.set({ shortcut }).catch(() => {});
+    stopRecording();
+    toast('快捷鍵已設定：' + combo);
+    return;
+  }
+  if (!shortcut || e.repeat) return;
+  const combo = comboFromEvent(e);
+  if (combo !== shortcut) return;
+  e.preventDefault();
+  chrome.runtime.sendMessage({ type: 'togglePanel', windowId: winId }).catch(() => {});
+});
 
 async function getBrowserThemeColor() {
   try {
@@ -313,6 +523,124 @@ function luminance(hexOrRgb) {
 function mix(bg, other, amount) {
   return `color-mix(in srgb, ${bg} ${Math.round((1 - amount) * 100)}%, ${other})`;
 }
+
+function getSpFullscreenElement() {
+  return document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || null;
+}
+
+function shouldHideSpForFullscreen() {
+  const fsEl = getSpFullscreenElement();
+  if (fsEl) return true;
+  return false;
+}
+
+function updateSpFullscreenState() {
+  const shouldHide = shouldHideSpForFullscreen();
+  const rail = document.getElementById('rail');
+  if (!rail) return;
+  if (shouldHide && !isSpFullscreenHidden) {
+    isSpFullscreenHidden = true;
+    rail.classList.add('sbx-fullscreen-hidden');
+    document.documentElement.classList.add('sbx-fullscreen-active');
+    document.body.classList.add('sbx-fullscreen-active');
+  } else if (!shouldHide && isSpFullscreenHidden) {
+    isSpFullscreenHidden = false;
+    rail.classList.remove('sbx-fullscreen-hidden');
+    document.documentElement.classList.remove('sbx-fullscreen-active');
+    document.body.classList.remove('sbx-fullscreen-active');
+  }
+}
+
+(function setupSpFullscreenHandling() {
+  document.addEventListener('fullscreenchange', updateSpFullscreenState);
+  document.addEventListener('webkitfullscreenchange', updateSpFullscreenState);
+  document.addEventListener('mozfullscreenchange', updateSpFullscreenState);
+  document.addEventListener('fullscreenerror', updateSpFullscreenState);
+  window.addEventListener('resize', () => setTimeout(updateSpFullscreenState, 100));
+})();
+
+// --- Clipboard fallback for Gemini / ChatGPT copy button inside iframe ---
+(function setupClipboardFallback() {
+  try {
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: 'clipboard-write' }).catch(() => {});
+      navigator.permissions.query({ name: 'clipboard-read' }).catch(() => {});
+    }
+  } catch (e) {}
+
+  window.addEventListener('message', async (event) => {
+    if (!event.data || event.data.type !== 'sbx-copy') return;
+    const text = event.data.text || '';
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('已複製');
+      if (event.source) event.source.postMessage({ type: 'sbx-copy-result', success: true }, '*');
+    } catch (err) {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        ta.style.top = '-9999px';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand('copy');
+        ta.remove();
+        if (ok) {
+          toast('已複製');
+          if (event.source) event.source.postMessage({ type: 'sbx-copy-result', success: true }, '*');
+        } else throw err;
+      } catch (e2) {
+        toast('複製失敗：' + (e2.message || err.message));
+        if (event.source) event.source.postMessage({ type: 'sbx-copy-result', success: false, error: e2.message || err.message }, '*');
+      }
+    }
+  });
+
+  try {
+    chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+      if (msg && msg.type === 'sbx-copy-text' && typeof msg.text === 'string') {
+        navigator.clipboard.writeText(msg.text).then(() => {
+          toast('已複製');
+          sendResponse({ ok: true });
+        }).catch((err) => {
+          try {
+            const ta = document.createElement('textarea');
+            ta.value = msg.text;
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            const ok = document.execCommand('copy');
+            ta.remove();
+            if (ok) { toast('已複製'); sendResponse({ ok: true }); }
+            else sendResponse({ ok: false, error: err.message });
+          } catch (e2) { sendResponse({ ok: false, error: e2.message || err.message }); }
+        });
+        return true;
+      }
+    });
+  } catch (e) {}
+
+  siteFrame.addEventListener('load', () => {
+    setTimeout(() => {
+      try {
+        const win = siteFrame.contentWindow;
+        if (!win || !win.navigator || !win.navigator.clipboard) return;
+        const orig = win.navigator.clipboard.writeText.bind(win.navigator.clipboard);
+        win.navigator.clipboard.writeText = async (text) => {
+          try { return await orig(text); } catch (e) {
+            try { await navigator.clipboard.writeText(text); return; } catch (e2) {
+              const ta = document.createElement('textarea'); ta.value = text; ta.style.position='fixed'; ta.style.left='-9999px'; document.body.appendChild(ta); ta.select(); const ok=document.execCommand('copy'); ta.remove(); if(!ok) throw e2; return;
+            }
+          }
+        };
+      } catch (e) {}
+    }, 900);
+  });
+})();
 
 function toast(msg) {
   const el = document.getElementById('toast');
@@ -349,10 +677,16 @@ chrome.storage.onChanged.addListener((changes, area) => {
       }
     }
     if (changes.theme) theme = changes.theme.newValue;
-    if (changes.customColor) customColor = changes.customColor.newValue;
-    if (changes.theme || changes.customColor) {
+    if (changes.customColor) customColor = changes.customColor.newValue || '#f2f3f5';
+    if (changes.customTextColor) customTextColor = changes.customTextColor.newValue || '';
+    if (changes.theme || changes.customColor || changes.customTextColor) {
       renderThemeOptions();
       applyTheme();
+    }
+    if (changes.shortcut) {
+      shortcut = changes.shortcut.newValue || '';
+      renderShortcut();
+      initShortcut();
     }
   } catch (e) {}
 });
