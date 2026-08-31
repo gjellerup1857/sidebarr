@@ -4,6 +4,22 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 `2026.0.x`。
 
+## [2026.0.9] - 2026-08-31
+
+### 🐞 修正
+
+#### 1. 關閉/收回側邊欄後網頁內容仍被面板遮蓋
+- **問題**：關閉或收回側邊欄後（`>` / `X`），`html.sbx-reserve body {margin-right:44px}` 對 `width:100vw`、`inline style` 或 `body` 本身 `100vw` 的頁面無效，右側元素仍跑到 `44px` Rail 下方
+- **修復**：
+  - `content.css:32` 增 `scrollbar-gutter:stable` 與 `body {max-width:calc(100vw - 44px)}`、`[style*="100vw"]` 後備；`content.js` 新增 `applyBodyRailCompensation()` 以 `style.setProperty('margin-right','44px','important')` / `max-width` / `box-sizing` / `overflow-x:clip` 直接覆蓋 `inline !important`，關閉時完整還原
+  - `content.js:181,233` 擴充修正引擎：新增 `vwElements:Map` 與 `shouldAdjustVw`（同時處理 `inline 100vw` 與樣式表 `100vw` 以 `rect` 判斷），對 `document.body` / `document.documentElement` 及所有 `body *` 中貼右全寬元素（含 `100vw`）套用 `width/max-width:calc(100vw - 44px)`，`fixed/sticky` 另加 `right:44px`，並以 `Map` 記憶還原
+  - `background.js:261` 已確保關閉後對同視窗所有 `http(s)` 分頁注入並保持 `panelOpen:false`，確保 Rail 常駐
+
+#### 2. 其他
+- `manifest.json:4` 版本 `2026.0.8` → `2026.0.9`
+
+---
+
 ## [2026.0.8] - 2026-08-31
 
 ### 🐞 修正

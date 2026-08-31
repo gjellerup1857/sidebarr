@@ -155,12 +155,67 @@
   const shortcutErr = settingsEl.querySelector('#sbx-shortcut-err');
   const shortcutLink = settingsEl.querySelector('#sbx-shortcut-link');
 
+  let originalBodyMarginRight = null;
+  let originalBodyMaxWidth = null;
+  let originalHtmlOverflowX = null;
+
+  function applyBodyRailCompensation(enable) {
+    try {
+      if (enable) {
+        if (originalBodyMarginRight === null) {
+          originalBodyMarginRight = document.body ? document.body.style.getPropertyValue('margin-right') : '';
+        }
+        if (originalBodyMaxWidth === null) {
+          originalBodyMaxWidth = document.body ? document.body.style.getPropertyValue('max-width') : '';
+        }
+        if (originalHtmlOverflowX === null && document.documentElement) {
+          originalHtmlOverflowX = document.documentElement.style.getPropertyValue('overflow-x');
+        }
+        if (document.body) {
+          document.body.style.setProperty('margin-right', '44px', 'important');
+          document.body.style.setProperty('max-width', 'calc(100vw - 44px)', 'important');
+          document.body.style.setProperty('box-sizing', 'border-box', 'important');
+        }
+        if (document.documentElement) {
+          document.documentElement.style.setProperty('overflow-x', 'clip', 'important');
+        }
+      } else {
+        if (document.body) {
+          if (originalBodyMarginRight !== null) {
+            if (originalBodyMarginRight) document.body.style.setProperty('margin-right', originalBodyMarginRight);
+            else document.body.style.removeProperty('margin-right');
+          } else {
+            document.body.style.removeProperty('margin-right');
+          }
+          if (originalBodyMaxWidth !== null) {
+            if (originalBodyMaxWidth) document.body.style.setProperty('max-width', originalBodyMaxWidth);
+            else document.body.style.removeProperty('max-width');
+          } else {
+            document.body.style.removeProperty('max-width');
+          }
+          document.body.style.removeProperty('box-sizing');
+        }
+        if (document.documentElement && originalHtmlOverflowX !== null) {
+          if (originalHtmlOverflowX) document.documentElement.style.setProperty('overflow-x', originalHtmlOverflowX);
+          else document.documentElement.style.removeProperty('overflow-x');
+        }
+        // reset stored values after restore to allow re-apply
+        if (!enable) {
+          originalBodyMarginRight = null;
+          originalBodyMaxWidth = null;
+          originalHtmlOverflowX = null;
+        }
+      }
+    } catch (e) {}
+  }
+
   function show() {
     if (isFullscreenHidden) {
       root.classList.add('sbx-fullscreen-hidden');
       root.classList.add('sbx-hidden');
       document.documentElement.classList.add('sbx-fullscreen-active');
       document.documentElement.classList.remove('sbx-reserve');
+      applyBodyRailCompensation(false);
       if (typeof adjustFixedElements === 'function') adjustFixedElements();
       return;
     }
@@ -170,16 +225,19 @@
       root.classList.remove('sbx-enter');
       root.classList.add('sbx-hidden');
       document.documentElement.classList.remove('sbx-reserve');
+      applyBodyRailCompensation(false);
     } else {
       root.classList.add('sbx-enter');
       root.classList.remove('sbx-hidden');
       document.documentElement.classList.add('sbx-reserve');
+      applyBodyRailCompensation(true);
     }
     if (typeof scheduleAdjustFixed === 'function') scheduleAdjustFixed();
   }
 
-  // --- 修正部分網頁被面板遮擋（fixed/sticky 全寬元素）---
+  // --- 修正部分網頁被面板遮擋（fixed / sticky / 100vw 全寬元素）---
   const fixedElements = new Map();
+  const vwElements = new Map();
   let fixedObserver = null;
   let fixedRaf = null;
 
@@ -196,11 +254,25 @@
       const style = getComputedStyle(el);
       const rect = el.getBoundingClientRect();
       const vw = window.innerWidth;
-      if (rect.height > window.innerHeight * 0.35) return false;
+      if (rect.height > window.innerHeight * 0.45) return false;
       if (rect.width < vw * 0.5) return false;
       const touchesRight = Math.abs(rect.right - vw) < 3;
       const isFullWidth = (style.left === '0px' && style.right === '0px') || style.width === '100vw' || Math.abs(rect.width - vw) < 3;
       return touchesRight && isFullWidth;
+    } catch (e) { return false; }
+  }
+
+  function shouldAdjustVw(el) {
+    if (el.id === 'sbx-rail-root' || (el.closest && el.closest('#sbx-rail-root'))) return false;
+    try {
+      const rect = el.getBoundingClientRect();
+      const style = getComputedStyle(el);
+      const isVwStyle = style.width === '100vw' || el.style.width.includes('100vw') || (el.getAttribute('style') || '').includes('100vw');
+      const isVwComputed = Math.abs(rect.width - window.innerWidth) < 2 && Math.abs(rect.right - window.innerWidth) < 3;
+      // 同時處理 inline 100vw 與樣式表 100vw（後者以 rect 判斷）
+      const hasVw = isVwStyle || isVwComputed;
+      if (!hasVw) return false;
+      return Math.abs(rect.right - window.innerWidth) < 3 && rect.width >= window.innerWidth * 0.85;
     } catch (e) { return false; }
   }
 
@@ -217,32 +289,59 @@
         } catch (e) {}
       });
       fixedElements.clear();
+      vwElements.forEach((original, el) => {
+        try {
+          if (original.width !== null) el.style.setProperty('width', original.width);
+          else el.style.removeProperty('width');
+          if (original.maxWidth !== null) el.style.setProperty('max-width', original.maxWidth);
+          else el.style.removeProperty('max-width');
+        } catch (e) {}
+      });
+      vwElements.clear();
       return;
     }
     try {
-      const all = document.querySelectorAll('body *');
-      for (const el of all) {
-        if (fixedElements.has(el)) continue;
-        if (!isFixedOrSticky(el)) continue;
-        if (!shouldAdjustFixed(el)) continue;
-        const inlineRight = el.style.getPropertyValue('right');
-        const inlineWidth = el.style.getPropertyValue('width');
-        const inlineMaxWidth = el.style.getPropertyValue('max-width');
-        fixedElements.set(el, {
-          right: inlineRight ? inlineRight : null,
-          width: inlineWidth ? inlineWidth : null,
-          maxWidth: inlineMaxWidth ? inlineMaxWidth : null
-        });
-        try {
-          el.style.setProperty('right', '44px', 'important');
-          const cw = getComputedStyle(el).width;
-          if (cw === window.innerWidth + 'px' || el.style.width === '100vw' || getComputedStyle(el).width === '100vw') {
+      const candidates = [];
+      if (document.body) candidates.push(document.body);
+      if (document.documentElement) candidates.push(document.documentElement);
+      candidates.push(...document.querySelectorAll('body *'));
+      for (const el of candidates) {
+        if (!el || el.id === 'sbx-rail-root' || (el.closest && el.closest('#sbx-rail-root'))) continue;
+        // 1) fixed/sticky 全寬貼右
+        if (!fixedElements.has(el) && isFixedOrSticky(el) && shouldAdjustFixed(el)) {
+          const inlineRight = el.style.getPropertyValue('right');
+          const inlineWidth = el.style.getPropertyValue('width');
+          const inlineMaxWidth = el.style.getPropertyValue('max-width');
+          fixedElements.set(el, {
+            right: inlineRight ? inlineRight : null,
+            width: inlineWidth ? inlineWidth : null,
+            maxWidth: inlineMaxWidth ? inlineMaxWidth : null
+          });
+          try {
+            el.style.setProperty('right', '44px', 'important');
+            const cw = getComputedStyle(el).width;
+            if (cw === window.innerWidth + 'px' || el.style.width === '100vw' || getComputedStyle(el).width === '100vw') {
+              el.style.setProperty('width', 'calc(100vw - 44px)', 'important');
+              el.style.setProperty('max-width', 'calc(100vw - 44px)', 'important');
+            } else {
+              el.style.setProperty('max-width', 'calc(100vw - 44px)', 'important');
+            }
+          } catch (e) {}
+          continue;
+        }
+        // 2) 一般元素的 100vw（非 fixed 亦會被面板遮蓋）
+        if (!vwElements.has(el) && !fixedElements.has(el) && shouldAdjustVw(el)) {
+          const inlineWidth = el.style.getPropertyValue('width');
+          const inlineMaxWidth = el.style.getPropertyValue('max-width');
+          vwElements.set(el, {
+            width: inlineWidth ? inlineWidth : null,
+            maxWidth: inlineMaxWidth ? inlineMaxWidth : null
+          });
+          try {
             el.style.setProperty('width', 'calc(100vw - 44px)', 'important');
             el.style.setProperty('max-width', 'calc(100vw - 44px)', 'important');
-          } else {
-            el.style.setProperty('max-width', 'calc(100vw - 44px)', 'important');
-          }
-        } catch (e) {}
+          } catch (e) {}
+        }
       }
     } catch (e) {}
   }

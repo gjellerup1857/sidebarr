@@ -31,11 +31,20 @@
 
 html.sbx-reserve {
   --sbx-rail-width: 44px;
+  scrollbar-gutter: stable;
 }
 
 html.sbx-reserve body {
   margin-right: var(--sbx-rail-width) !important;
   box-sizing: border-box !important;
+  /* 防止 body 本身 100vw 導致溢出 */
+  max-width: calc(100vw - var(--sbx-rail-width)) !important;
+}
+
+html.sbx-reserve body[style*="100vw"],
+html.sbx-reserve [style*="100vw"] {
+  max-width: calc(100vw - var(--sbx-rail-width)) !important;
+  width: calc(100vw - var(--sbx-rail-width)) !important;
 }
 
 #sbx-rail-root *,
