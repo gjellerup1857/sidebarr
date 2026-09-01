@@ -10,70 +10,30 @@
     try { return window.self !== window.top; } catch (e) { return false; }
   })();
 
-  let wasAd = false;
-  let adMutedOriginal = null;
-  let adRateOriginal = 1;
-
   const skipAd = () => {
     try {
       const video = document.querySelector('video.html5-main-video, video.video-stream');
       const adShowing = document.querySelector('.ad-showing, .ad-interrupting');
-      const skipBtn = document.querySelector('.ytp-ad-skip-button, .ytp-skip-ad-button, .ytp-ad-skip-button-modern, [class*="skip-button"]');
+      const skipBtn = document.querySelector('.ytp-ad-skip-button, .ytp-skip-ad-button, .ytp-ad-skip-button-modern, .ytp-ad-skip-button-slot, [class*="ytp-ad-skip"]');
 
-      // 點擊可跳過按鈕（無論是否偵測到 adShowing，都嘗試點擊）
-      if (skipBtn && skipBtn.offsetParent !== null) {
+      // 優先點擊跳過按鈕（最可靠）
+      if (skipBtn && skipBtn.offsetParent !== null && !skipBtn.disabled) {
         try { skipBtn.click(); } catch (e) {}
         try { skipBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })); } catch (e) {}
+        // 點擊後立即返回，讓 YouTube 自行切換
+        return;
       }
 
       if (adShowing && video) {
-        if (!wasAd) {
-          wasAd = true;
-          try { adMutedOriginal = video.muted; } catch (e) { adMutedOriginal = false; }
-          try { adRateOriginal = video.playbackRate || 1; } catch (e) { adRateOriginal = 1; }
-        }
-        // 僅對廣告影片加速與靜音，不隱藏容器
+        // 對於不可跳過的廣告，靜音並嘗試加速（不強制 seek，避免黑屏）
         try {
           if (!video.muted) video.muted = true;
-          // 僅在可 seek 時跳至結尾，避免對直播廣告拋錯
-          if (video.duration && isFinite(video.duration) && video.duration > 0 && video.duration < 600 && video.currentTime < video.duration - 0.2) {
-            try { video.currentTime = Math.max(0, video.duration - 0.1); } catch (e) {}
-          } else {
-            // 不可 seek 的廣告，加速播放
-            try { video.playbackRate = 16; } catch (e) {}
+          // 僅對短廣告（<30s）嘗試加速，不對長廣告 seek 以免觸發 YouTube 錯誤
+          if (video.duration && isFinite(video.duration) && video.duration > 0 && video.duration < 30) {
+            try { video.playbackRate = 2; } catch (e) {}
           }
           if (video.paused) video.play().catch(() => {});
         } catch (e) {}
-        // 輕量隱藏遮罩，不動主容器
-        document.querySelectorAll('.ytp-ad-player-overlay, #player-ads').forEach(el => {
-          if (el.style.display !== 'none') el.style.display = 'none';
-        });
-      } else if (wasAd && !adShowing && video) {
-        // 廣告剛結束，恢復現場
-        wasAd = false;
-        try {
-          video.muted = adMutedOriginal !== null ? adMutedOriginal : false;
-          video.playbackRate = adRateOriginal || 1;
-          video.style.removeProperty('opacity');
-          video.style.removeProperty('display');
-          video.style.removeProperty('visibility');
-          if (video.paused) video.play().catch(() => {});
-        } catch (e) {}
-        // 確保播放器容器可見
-        document.querySelectorAll('.html5-video-player').forEach(el => {
-          try {
-            el.style.removeProperty('display');
-            el.style.removeProperty('opacity');
-            el.style.removeProperty('visibility');
-          } catch (e) {}
-        });
-        // 還原被隱藏的遮罩（讓 YouTube 自行管理）
-        document.querySelectorAll('.ytp-ad-module, .ytp-ad-player-overlay, #player-ads').forEach(el => {
-          try { el.style.removeProperty('display'); } catch (e) {}
-        });
-      } else if (!adShowing) {
-        // 非廣告期間，確保不殘留加速/靜音
-        if (wasAd) wasAd = false;
       }
     } catch (e) {}
   };

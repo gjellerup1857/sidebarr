@@ -36,42 +36,6 @@
     }
   },
   {
-    "id": 104,
-    "priority": 1,
-    "action": { "type": "block" },
-    "condition": {
-      "urlFilter": "youtube.com/api/stats/ads",
-      "resourceTypes": ["xmlhttprequest", "ping", "other"]
-    }
-  },
-  {
-    "id": 105,
-    "priority": 1,
-    "action": { "type": "block" },
-    "condition": {
-      "urlFilter": "youtube-nocookie.com/api/stats/ads",
-      "resourceTypes": ["xmlhttprequest", "ping", "other"]
-    }
-  },
-  {
-    "id": 106,
-    "priority": 1,
-    "action": { "type": "block" },
-    "condition": {
-      "urlFilter": "youtube.com/pagead",
-      "resourceTypes": ["script", "image", "xmlhttprequest", "sub_frame", "other"]
-    }
-  },
-  {
-    "id": 107,
-    "priority": 1,
-    "action": { "type": "block" },
-    "condition": {
-      "urlFilter": "youtube.com/ptracking",
-      "resourceTypes": ["xmlhttprequest", "ping", "other"]
-    }
-  },
-  {
     "id": 108,
     "priority": 1,
     "action": { "type": "block" },

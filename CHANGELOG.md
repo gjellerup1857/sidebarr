@@ -4,6 +4,27 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 `2026.0.x`。
 
+## [2026.0.14] - 2026-09-01
+
+### 🐞 緊急修正
+
+#### 1. 點擊 YouTube 影片仍全黑 + 廣告處理回歸
+- **問題**：`v2026.0.13` 仍全黑且廣告快轉無效，部分 `get_video_info` 與 `api/stats` 阻擋導致播放器無法切換
+- **修復**：
+  - `youtube-adblock.js` 簡化為僅點擊 `skipBtn`（最可靠）與輕量 `muted+2x`，移除 `currentTime` 強制 seek 與 `wasAd` 狀態機中對 `adShowing` 的 `display:none` / `classList.remove`（避免误删播放器狀態），黑屏後不再殘留 `opacity`
+  - `adblock-rules.json` 移除 `youtube.com/api/stats/ads` / `pagead` / `ptracking` 等 YouTube 同域阻擋，僅保留 `||doubleclick.net` / `||googleadservices.com` / `||googlesyndication.com` / `||googletagmanager.com` / `||google-analytics.com` 第三方廣告網域
+  - `iframe-layout-fix` 對 `youtube.com` 已於 `v2026.0.12` 排除，本版保持 `exclude_matches` 避免 `height:auto` 影響播放器
+
+#### 2. 收回/關閉側邊欄時面板消失
+- **問題**：點擊 `>` / `X` 關閉側邊欄後，`44px` 常駐面板偶發消失（`panelOpen` 已設 `false` 但 `content.js` 未收到 `storage.onChanged` 或 `ensurePageRail` 僅處理 `activeTab`）
+- **修復**：
+  - `background.js:153,277` `closePanel()` 與 `ensurePageRail()` 新增 `broadcastShowRail()`：對同視窗所有 `http(s)` 分頁 `chrome.tabs.sendMessage({type:'showRail'})` 並重新 `executeScript`/`insertCSS`，確保 Rail 立即重顯
+  - `content.js:821` 新增 `chrome.runtime.onMessage` 監聽 `showRail`，強制 `panelOpen=false; isFullscreenHidden=false; show()`，避免 `storage` 未觸發時的顯示失效
+
+- `manifest.json:4` 版本 `2026.0.13` → `2026.0.14`
+
+---
+
 ## [2026.0.13] - 2026-09-01
 
 ### 🐞 修正

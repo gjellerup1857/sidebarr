@@ -818,6 +818,18 @@
     toastTimer = setTimeout(() => el.classList.remove('sbx-show'), 2200);
   }
 
+  try {
+    chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+      if (msg && msg.type === 'showRail') {
+        panelOpen = false;
+        isFullscreenHidden = false;
+        show();
+        sendResponse({ ok: true });
+        return true;
+      }
+    });
+  } catch (e) {}
+
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
     try {

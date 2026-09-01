@@ -160,7 +160,23 @@ async function closePanel(windowId) {
   } catch (e) {}
   await chrome.storage.local.set({ panelOpen: false });
   ensurePageRail(windowId);
+  broadcastShowRail(windowId);
   return { closed };
+}
+
+async function broadcastShowRail(windowId) {
+  try {
+    const tabs = windowId != null ? await chrome.tabs.query({ windowId }) : await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    for (const tab of tabs) {
+      if (!tab.id || !tab.url || !/^https?:/.test(tab.url)) continue;
+      try { await chrome.tabs.sendMessage(tab.id, { type: 'showRail' }); } catch (e) {}
+      // 同時嘗試直接注入以防 content 未注入
+      try {
+        await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+        await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['content.css'] });
+      } catch (e) {}
+    }
+  } catch (e) {}
 }
 
 async function handleFullscreenEnter(sender) {
@@ -281,6 +297,7 @@ async function ensurePageRail(windowId) {
         await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
         await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['content.css'] });
       } catch (e) {}
+      try { await chrome.tabs.sendMessage(tab.id, { type: 'showRail' }); } catch (e) {}
     }
     // 若沒有可注入的 tab，仍確保儲存狀態已為 false，讓下次開啟的 http(s) 頁面 init 時顯示 Rail
   } catch (e) {}
