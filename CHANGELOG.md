@@ -4,6 +4,16 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 `2026.0.x`。
 
+## [2026.0.24] - 2026-09-01
+
+### 🔥 緊急修復
+
+#### YouTube 側邊欄影片全白（再次）
+- **問題**：`v2026.0.23` 為修復 Gemini 跑版而移除所有 YouTube 佈局修正後，仍因 `youtube-adblock` 與 `adblock-rules` 對 `youtube.com/get_video_info` 的殘留攔截導致點擊後全白
+- **修復**：`youtube-adblock.js` 已簡化為僅 `skipBtn` 點擊（`v2026.0.23`），本版 `adblock-rules.json` 確認僅保留第三方 `doubleclick` 等，`manifest` 重新啟用 `youtube-adblock`（僅跳過可跳過廣告），`youtube-sidepanel-fix` 保持停用以確保原生 RWD 下影片可見
+
+---
+
 ## [2026.0.23] - 2026-09-01
 
 ### 🔥 緊急修復
