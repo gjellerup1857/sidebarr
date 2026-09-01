@@ -4,6 +4,19 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 `2026.0.x`。
 
+## [2026.0.11] - 2026-09-01
+
+### ✨ 改進
+
+#### 1. Brave 側邊欄 YouTube 廣告攔截
+- **問題**：Brave 瀏覽器本身可擋 YouTube 廣告，但 `chrome-extension://` 側邊欄內的 `iframe`（`youtube.com`）因 `top frame` 為擴充功能而非 `youtube.com`，Brave Shields 未套用 YouTube 規則，導致廣告仍出現
+- **修復**：
+  - 新增 `adblock-rules.json`（`declarativeNetRequest` `id: adblock`，`block`）：`||doubleclick.net`、`||googleadservices.com`、`||googlesyndication.com`、`||googletagmanager.com`、`youtube.com/api/stats/ads`、`youtube-nocookie.com/api/stats/ads`、`youtube.com/pagead`、`youtube.com/ptracking`、`google.com/pagead`、`google-analytics.com` 等，`resourceTypes` 含 `script/image/xmlhttprequest/media/sub_frame/other`
+  - 新增 `youtube-adblock.js` / `.css`（`content_scripts` `*://*.youtube.com/*` + `*://youtube-nocookie.com/*` `all_frames:true` `document_start`）：CSS 隱藏 `#player-ads`、`.ytp-ad-module`、`ytd-display-ad-renderer` 等；JS 以 `MutationObserver` + `setInterval(500ms)` 檢測 `.ad-showing`，自動 `video.muted=true; playbackRate=16; currentTime=duration` 並點擊 `.ytp-ad-skip-button`，移除 `ad-showing` 類
+  - `manifest.json:4` 版本 `2026.0.10` → `2026.0.11`，`declarative_net_request` 新增 `adblock` 資源
+
+---
+
 ## [2026.0.10] - 2026-08-31
 
 ### 🐞 修正

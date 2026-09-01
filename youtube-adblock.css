@@ -1,0 +1,37 @@
+/* YouTube 廣告隱藏 - 側邊欄專用 (Brave Shields 不適用於 extension iframe) */
+#masthead-ad,
+#player-ads,
+#google_companion_ad_div,
+#google_companion_ad_div *,
+.ytd-display-ad-renderer,
+.ytd-ad-slot-renderer,
+.ytd-in-feed-ad-layout-renderer,
+.ytd-promoted-sparkles-web-renderer,
+#contents > ytd-display-ad-renderer,
+#player .ytp-ad-module,
+.ytp-ad-player-overlay,
+.ytp-ad-overlay-container,
+.ytp-ad-image-overlay,
+.video-ads,
+.ytp-ad-text,
+.ytp-ad-skip-button-container,
+.ad-showing .ytp-ad-message-container,
+.ad-interrupting {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  pointer-events: none !important;
+}
+
+/* 當廣告播放時，隱藏影片上的廣告遮罩 */
+.ad-showing video {
+  opacity: 0 !important;
+}
+
+/* 隱藏首頁與搜尋結果中的廣告 */
+ytd-ad-slot-renderer,
+ytd-display-ad-renderer,
+ytd-promoted-video-renderer,
+ytd-compact-promoted-video-renderer {
+  display: none !important;
+}
