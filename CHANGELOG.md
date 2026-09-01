@@ -4,6 +4,24 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 `2026.0.x`。
 
+## [2026.0.12] - 2026-09-01
+
+### 🐞 修正
+
+#### 1. 側邊欄內 YouTube 影片全黑
+- **問題**：側邊欄開啟 YouTube 點播後影片介面全黑
+- **根因**：
+  - `youtube-adblock.css:27` `.ad-showing video{opacity:0 !important}` 在廣告被跳過後，若 `.ad-showing` 未從 `html5-video-player` 正確移除，影片保持隱藏
+  - `youtube-adblock.js:22` 對 `adShowing` 元素誤執行 `style.display='none'`，若命中播放器容器則直接隱藏整個播放器
+  - `iframe-layout-fix` 對 `youtube.com` 的 `video` 套用 `height:auto !important` 與 `div {min-width:0; max-width:100%}` 導致播放器高度塌陷
+- **修復**：
+  - `youtube-adblock.css` 移除 `opacity:0` 規則，僅隱藏廣告遮罩
+  - `youtube-adblock.js` 移除 `adShowing.style.display`，改為對所有 `.ad-showing/.ad-interrupting` 元素批次 `classList.remove`，並 `video.style.removeProperty('opacity/display')`；`isInsideSidePanel` 對 `youtube` 網域直接返回 `false` 避免 `iframe-layout-fix` 介入
+  - `iframe-layout-fix.css/js` 調整 `video/iframe` 僅 `max-width:100%`（移除 `height:auto`），`manifest.json` 對該修正新增 `exclude_matches: ["*://*.youtube.com/*", "*://youtube.com/*", "*://*.youtube-nocookie.com/*"]` 避免注入 YouTube
+  - `manifest.json:4` 版本 `2026.0.11` → `2026.0.12`
+
+---
+
 ## [2026.0.11] - 2026-09-01
 
 ### ✨ 改進

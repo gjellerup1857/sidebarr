@@ -4,9 +4,14 @@
 
   const isInsideSidePanel = () => {
     try {
+      // YouTube 等影片站點由專屬 adblock 處理，不套用此通用收縮（避免 video 黑屏/高度異常）
+      const h = location.hostname || '';
+      if (h.includes('youtube.com') || h.includes('youtube-nocookie.com') || h.includes('youtu.be')) return false;
       // 在側邊欄 iframe 內：window.self !== window.top 且寬度窄
       return window.self !== window.top && window.innerWidth < 750;
     } catch (e) {
+      const h2 = location.hostname || '';
+      if (h2.includes('youtube.com') || h2.includes('youtube-nocookie.com')) return false;
       return window.innerWidth < 750;
     }
   };
@@ -23,7 +28,8 @@
       div, main, section, article, c-wiz, [role="main"] { min-width: 0 !important; max-width: 100% !important; }
       pre, code { white-space: pre-wrap !important; word-break: break-word !important; overflow-x: auto !important; max-width: 100% !important; }
       table { display: block !important; max-width: 100% !important; overflow-x: auto !important; }
-      img, video, iframe { max-width: 100% !important; height: auto !important; }
+      img, canvas, svg { max-width: 100% !important; height: auto !important; }
+      video, iframe { max-width: 100% !important; }
       main, [role="main"], c-wiz, [data-test-id="conversation"], .conversation-container, .chat-container {
         width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: hidden !important;
       }

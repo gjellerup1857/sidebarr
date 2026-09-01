@@ -35,9 +35,13 @@
     white-space: nowrap !important;
   }
 
-  img, video, iframe, canvas, svg {
+  img, canvas, svg {
     max-width: 100% !important;
     height: auto !important;
+  }
+
+  video, iframe {
+    max-width: 100% !important;
   }
 
   /* Gemini 特定容器（多版本相容，含常見的 c-wiz / bard / gemini 選擇器） */

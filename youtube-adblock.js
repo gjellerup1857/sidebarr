@@ -18,17 +18,16 @@
       const skipBtn = document.querySelector('.ytp-ad-skip-button, .ytp-skip-ad-button, [class*="skip-button"]');
       
       if (adShowing && video) {
-        // 隱藏廣告容器
-        adShowing.style.display = 'none';
-        // 加速播放以快速跳過不可跳過廣告
-        if (!video.muted) video.muted = true;
-        video.playbackRate = 16;
-        // 直接跳至結尾
-        if (video.duration && isFinite(video.duration) && video.currentTime < video.duration - 0.5) {
-          // 對於時長 < 60s 的廣告直接跳過
-          try { video.currentTime = video.duration; } catch (e) {}
-        }
-        if (video.paused) video.play().catch(() => {});
+        // 加速播放以快速跳過不可跳過廣告（不隱藏容器，避免全黑）
+        try {
+          if (!video.muted) video.muted = true;
+          video.playbackRate = 16;
+          // 直接跳至結尾
+          if (video.duration && isFinite(video.duration) && video.currentTime < video.duration - 0.5) {
+            try { video.currentTime = video.duration; } catch (e) {}
+          }
+          if (video.paused) video.play().catch(() => {});
+        } catch (e) {}
       }
 
       // 點擊可跳過按鈕
@@ -45,12 +44,23 @@
         el.style.display = 'none';
       });
 
-      // 移除廣告類別，讓播放器恢復
-      if (adShowing) {
-        // 嘗試移除 ad-showing 類，YouTube 會依此判斷是否為廣告
-        document.documentElement.classList.remove('ad-showing');
-        document.body.classList.remove('ad-showing');
-      }
+      // 移除廣告類別，讓播放器恢復（需從實際帶有該類的元素移除，否則影片保持 opacity:0 或黑屏）
+      try {
+        document.querySelectorAll('.ad-showing, .ad-interrupting').forEach(el => {
+          el.classList.remove('ad-showing', 'ad-interrupting');
+        });
+        // YouTube 播放器容器通常為 .html5-video-player
+        document.querySelectorAll('.html5-video-player.ad-showing, .html5-video-player.ad-interrupting').forEach(el => {
+          el.classList.remove('ad-showing', 'ad-interrupting');
+        });
+      } catch (e) {}
+      // 確保影片可見
+      try {
+        if (video) {
+          video.style.removeProperty('opacity');
+          video.style.removeProperty('display');
+        }
+      } catch (e) {}
     } catch (e) {}
   };
 

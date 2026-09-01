@@ -23,10 +23,7 @@
   pointer-events: none !important;
 }
 
-/* 當廣告播放時，隱藏影片上的廣告遮罩 */
-.ad-showing video {
-  opacity: 0 !important;
-}
+/* 當廣告播放時，僅隱藏廣告遮罩，不隱藏主影片（避免全黑） */
 
 /* 隱藏首頁與搜尋結果中的廣告 */
 ytd-ad-slot-renderer,
