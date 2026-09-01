@@ -4,6 +4,19 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 `2026.0.x`。
 
+## [2026.0.26] - 2026-09-01
+
+### 🎨 優化 & 🐞 修正
+
+#### 1. 統一所有網頁在側邊欄的 RWD（移除單一頁面特例）
+- **問題**：`v2026.0.25` 為修復 Gemini 跑版而對其單獨強制 `min-width`，卻使 Gemini 如圖中「職涯顧問」再次扭曲，且 YouTube 影片黑屏
+- **修復**：
+  - **移除 Gemeni 專屬 CSS**：`iframe-layout-fix` 由 `gemini/chatgpt/...` 全量改為僅對真正溢出的 `pre/code/table` 做最小侵入，`Gemini` 現與其他網頁一致，完全沿用原生 RWD
+  - **YouTube**：`youtube-sidepanel-fix` 與 `iframe-layout-fix` 合併為 `unified-sidepanel-fix.js/css`，對 `youtube.com` 與 `gemini` 等所有側邊欄窄 `iframe`（`<700px`）統一僅處理 `pre/code` 的 `pre-wrap` 與 `table` 橫向捲動，不再強制 `div/main/c-wiz` 的 `width/flex-direction`
+  - `manifest.json:4` 版本 `2026.0.25` → `2026.0.26`
+
+---
+
 ## [2026.0.25] - 2026-09-01
 
 ### 🎨 優化 & 🐞 修正 (基於 Modern Web Guidance & chrome-extensions Skill)
