@@ -25,11 +25,26 @@
 
 ---
 
-## [2026.0.15] - 2026-09-01
+## [2026.0.17] - 2026-09-01
 
-### 🎨 優化 & 🐞 修正
+### 🐞 修正
 
-#### 1. 收回/關閉側邊欄動畫卡頓、面板跑動
+#### 1. 統一 RWD：Gemini 在側邊欄跑版且連帶影響其他網頁
+- **問題**：前版 `iframe-layout-fix` 以 `<all_urls>` 對所有 `div/main/section/c-wiz` 強制 `min-width:0; max-width:100%`，雖修復 Gemini 對話溢出，卻導致 Gemini 自身 `RWD`（如圖中深色對話列表）及部分站點（如 YouTube、一般官網）跑版
+- **修復**：
+  - `manifest.json:44` 將 `iframe-layout-fix` 的 `matches` 由 `<all_urls>` 縮限為 `gemini.google.com / aistudio.google.com / *.gemini / chatgpt.com / chat.openai.com / claude.ai / perplexity.ai` 等 AI 站點，避免影響其他網頁的原生 RWD
+  - `iframe-layout-fix.css` 移除 `div/main/section/c-wiz` 全域收縮與 `* {box-sizing}`，僅保留 `pre/code/table/img` 等**長內容**的 `pre-wrap/break-word` 與 `overflow-x:auto`，以及對話容器在**實際溢出時**才限寬
+  - `iframe-layout-fix.js` 重構 `fixOverflowElements()` 由「掃描全部 `body *`」改為僅掃描 `pre,code,table,img,canvas,svg` 與真正溢出（`rect.width>vw`）的元素，並移除對 `main/c-wiz` 的強制 `width:100%`，改為僅對溢出的 `c-wiz/[data-test-id]` 動態限寬
+  - `youtube-sidepanel-fix` 保持獨立，Gemini 側邊欄內由專屬 `iframe-layout-fix` 處理，兩者不再互相干擾
+- `manifest.json:4` 版本 `2026.0.16` → `2026.0.17`
+
+---
+
+## [2026.0.16] - 2026-09-01
+
+### 🐞 緊急修正 & 🎨 優化
+
+#### 1. 側邊欄 YouTube 影片全空白 & 廣告回歸
 - **問題**：收回或關閉側邊欄時 `44px` Rail 與頁面 `margin-right` 不同步，出現面板跑動與內容跳動
 - **修復**：
   - `content.css:1,32` ` #sbx-rail-root` 改 `transition: opacity 0.2s ease` 並 `will-change:opacity`，移除 `sbx-enter` 的 `0.16s` 延遲；`html.sbx-reserve body` 新增 `transition: margin-right 0.2s ease, max-width 0.2s ease`

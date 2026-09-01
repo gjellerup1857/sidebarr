@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Sidebarr 瀏覽器側邊欄工具",
-  "version": "2026.0.16",
+  "version": "2026.0.17",
   "description": "頁面內建常駐面板列，一鍵加入常用網站並在側邊欄開啟，面板列永遠停靠瀏覽器最右側",
   "permissions": [
     "storage",
@@ -42,8 +42,7 @@
       "run_at": "document_start"
     },
     {
-      "matches": ["<all_urls>"],
-      "exclude_matches": ["*://*.youtube.com/*", "*://youtube.com/*", "*://*.youtube-nocookie.com/*", "*://youtube-nocookie.com/*"],
+      "matches": ["*://gemini.google.com/*", "*://aistudio.google.com/*", "*://*.gemini.google.com/*", "*://chatgpt.com/*", "*://*.chatgpt.com/*", "*://chat.openai.com/*", "*://*.chat.openai.com/*", "*://claude.ai/*", "*://*.claude.ai/*", "*://perplexity.ai/*", "*://*.perplexity.ai/*"],
       "js": ["iframe-layout-fix.js"],
       "css": ["iframe-layout-fix.css"],
       "all_frames": true,

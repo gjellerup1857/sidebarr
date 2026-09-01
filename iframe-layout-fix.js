@@ -18,21 +18,14 @@
 
   const injectFix = () => {
     if (!isInsideSidePanel()) return;
-    // 注入額外樣式以強制收縮（即使 CSS 已載入，再補一次動態樣式確保優先級）
     if (document.getElementById('sbx-layout-fix')) return;
     const style = document.createElement('style');
     style.id = 'sbx-layout-fix';
     style.textContent = `
-      html, body { max-width: 100% !important; overflow-x: hidden !important; }
-      * { box-sizing: border-box !important; }
-      div, main, section, article, c-wiz, [role="main"] { min-width: 0 !important; max-width: 100% !important; }
-      pre, code { white-space: pre-wrap !important; word-break: break-word !important; overflow-x: auto !important; max-width: 100% !important; }
+      pre, code { white-space: pre-wrap !important; word-break: break-word !important; overflow-wrap: break-word !important; max-width: 100% !important; overflow-x: auto !important; }
       table { display: block !important; max-width: 100% !important; overflow-x: auto !important; }
       img, canvas, svg { max-width: 100% !important; height: auto !important; }
       video, iframe { max-width: 100% !important; }
-      main, [role="main"], c-wiz, [data-test-id="conversation"], .conversation-container, .chat-container {
-        width: 100% !important; max-width: 100% !important; min-width: 0 !important; overflow-x: hidden !important;
-      }
     `;
     (document.head || document.documentElement).appendChild(style);
   };
@@ -40,44 +33,47 @@
   const fixOverflowElements = () => {
     if (!isInsideSidePanel()) return;
     try {
-      const vw = window.innerWidth;
-      // 找出所有超出視窗的水平溢出元素
-      const all = document.querySelectorAll('body *');
-      for (const el of all) {
-        if (el.id === 'sbx-layout-fix' || el.closest && el.closest('#sbx-layout-fix')) continue;
+      // 僅處理真正溢出的長內容，不動整體佈局
+      const selectors = 'pre, code, table, img, canvas, svg';
+      const candidates = document.querySelectorAll(selectors);
+      for (const el of candidates) {
+        if (el.dataset.sbxFixed) continue;
         try {
           const rect = el.getBoundingClientRect();
-          // 若元素右緣超出視窗或寬度大於視窗
-          if (rect.width > vw + 2 || rect.right > vw + 2) {
-            // 只對可收縮的容器處理，避免破壞固定定位的對話框
-            const style = getComputedStyle(el);
-            if (style.position === 'fixed' && rect.width < vw * 0.5) continue; // 小固定按鈕不處理
-            // 標記並修正
-            if (!el.dataset.sbxFixed) {
-              el.dataset.sbxFixed = '1';
-              el.style.setProperty('max-width', '100%', 'important');
-              el.style.setProperty('box-sizing', 'border-box', 'important');
-              if (style.position !== 'fixed' && style.position !== 'sticky') {
-                el.style.setProperty('overflow-x', 'hidden', 'important');
-              }
-            }
-            // 對 pre/code/table 特別處理
-            if (el.tagName === 'PRE' || el.tagName === 'CODE' || el.tagName === 'TABLE') {
+          const vw = window.innerWidth;
+          if (rect.width <= vw + 2 && rect.right <= vw + 2) continue;
+          if (el.tagName === 'IMG' || el.tagName === 'CANVAS' || el.tagName === 'SVG') {
+            // 圖片等僅限制寬度，不強制高度
+            el.dataset.sbxFixed = '1';
+            el.style.setProperty('max-width', '100%', 'important');
+            el.style.setProperty('box-sizing', 'border-box', 'important');
+            el.style.setProperty('height', 'auto', 'important');
+          } else {
+            el.dataset.sbxFixed = '1';
+            el.style.setProperty('max-width', '100%', 'important');
+            el.style.setProperty('box-sizing', 'border-box', 'important');
+            if (el.tagName === 'PRE' || el.tagName === 'CODE') {
               el.style.setProperty('white-space', 'pre-wrap', 'important');
               el.style.setProperty('word-break', 'break-word', 'important');
+              el.style.setProperty('overflow-wrap', 'break-word', 'important');
+              el.style.setProperty('overflow-x', 'auto', 'important');
+            } else if (el.tagName === 'TABLE') {
+              el.style.setProperty('display', 'block', 'important');
               el.style.setProperty('overflow-x', 'auto', 'important');
             }
           }
         } catch (e) {}
       }
-      // 特別處理 Gemini 的對話容器：強制 min-width:0
-      const candidates = document.querySelectorAll('main, [role="main"], c-wiz, [data-test-id="conversation"], .conversation-container, .chat-container, .response-container');
-      for (const el of candidates) {
+      // Gemini 對話容器：僅當實際溢出時才限制，避免破壞正常 RWD
+      const narrowCandidates = document.querySelectorAll('c-wiz, [data-test-id="conversation"], .conversation-container, .chat-container');
+      for (const el of narrowCandidates) {
         try {
-          el.style.setProperty('min-width', '0', 'important');
-          el.style.setProperty('max-width', '100%', 'important');
-          el.style.setProperty('width', '100%', 'important');
-          el.style.setProperty('overflow-x', 'hidden', 'important');
+          const rect = el.getBoundingClientRect();
+          if (rect.width > window.innerWidth + 2) {
+            el.style.setProperty('max-width', '100%', 'important');
+            el.style.setProperty('min-width', '0', 'important');
+            el.style.setProperty('box-sizing', 'border-box', 'important');
+          }
         } catch (e) {}
       }
     } catch (e) {}
