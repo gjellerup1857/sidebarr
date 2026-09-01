@@ -22,12 +22,20 @@
   -webkit-user-select: none;
   opacity: 1;
   pointer-events: auto;
-  transition: opacity 0.2s ease;
-  will-change: opacity;
+  transform: translateX(0);
+  transition: none;
 }
 
 #sbx-rail-root.sbx-enter {
-  transition-delay: 0s;
+  transform: translateX(0);
+  transition: none;
+}
+
+#sbx-rail-root.sbx-hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(100%);
+  transition: none;
 }
 
 html.sbx-reserve {
@@ -38,9 +46,7 @@ html.sbx-reserve {
 html.sbx-reserve body {
   margin-right: var(--sbx-rail-width) !important;
   box-sizing: border-box !important;
-  /* 防止 body 本身 100vw 導致溢出 */
   max-width: calc(100vw - var(--sbx-rail-width)) !important;
-  transition: margin-right 0.2s ease, max-width 0.2s ease !important;
 }
 
 html.sbx-reserve body[style*="100vw"],
@@ -55,10 +61,7 @@ html.sbx-reserve [style*="100vw"] {
   box-sizing: border-box;
 }
 
-#sbx-rail-root.sbx-hidden {
-  opacity: 0;
-  pointer-events: none;
-}
+/* sbx-hidden handled in main rail block */
 
 #sbx-rail-root.sbx-fullscreen-hidden {
   opacity: 0 !important;

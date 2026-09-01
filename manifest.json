@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Sidebarr 瀏覽器側邊欄工具",
-  "version": "2026.0.19",
+  "version": "2026.0.21",
   "description": "頁面內建常駐面板列，一鍵加入常用網站並在側邊欄開啟，面板列永遠停靠瀏覽器最右側",
   "permissions": [
     "storage",
@@ -42,7 +42,7 @@
       "run_at": "document_start"
     },
     {
-      "matches": ["*://chatgpt.com/*", "*://*.chatgpt.com/*", "*://chat.openai.com/*", "*://*.chat.openai.com/*", "*://claude.ai/*", "*://*.claude.ai/*", "*://perplexity.ai/*", "*://*.perplexity.ai/*"],
+      "matches": ["*://gemini.google.com/*", "*://aistudio.google.com/*", "*://*.gemini.google.com/*", "*://chatgpt.com/*", "*://*.chatgpt.com/*", "*://chat.openai.com/*", "*://*.chat.openai.com/*", "*://claude.ai/*", "*://*.claude.ai/*", "*://perplexity.ai/*", "*://*.perplexity.ai/*", "*://notebooklm.google.com/*", "*://*.notebooklm.google.com/*"],
       "js": ["iframe-layout-fix.js"],
       "css": ["iframe-layout-fix.css"],
       "all_frames": true,
@@ -54,6 +54,13 @@
       "css": ["youtube-adblock.css"],
       "all_frames": true,
       "run_at": "document_start"
+    },
+    {
+      "matches": ["*://*.youtube.com/*", "*://youtube.com/*", "*://*.youtube-nocookie.com/*", "*://youtube-nocookie.com/*"],
+      "js": ["youtube-sidepanel-fix.js"],
+      "css": ["youtube-sidepanel-fix.css"],
+      "all_frames": true,
+      "run_at": "document_idle"
     }
   ],
   "side_panel": {

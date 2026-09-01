@@ -4,6 +4,38 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 `2026.0.x`。
 
+## [2026.0.21] - 2026-09-01
+
+### 🎨 優化 & 🐞 修正
+
+#### 1. 收回/展開動畫仍不順暢
+- **修復**：`content.css:1` 移除 `sbx-enter` 延遲，`#sbx-rail-root` 改 `transform:translateX` 無過渡（`transition:none`），`html.sbx-reserve body` 移除 `transition` 使 `margin-right` 與 Rail 同步瞬時完成；`background.js` `broadcastShowRail` 僅處理 `activeTab` 並 `200ms` 節流 `MutationObserver`，消除面板跑動
+
+#### 2. YouTube 影片頁與 Gemini 筆記本 UI（統一 RWD 2.0）
+- **問題**：`v2026.0.20` 雖修復動畫，但 YouTube 除影片外元素仍溢出，Gemini 筆記本「職涯顧問」如圖仍扭曲
+- **修復**：
+  - **統一策略**：移除所有針對單一站點的強制 `width:100%` 與 `flex-direction`，改為**僅對真正溢出的長內容**（`pre,code,table,img`）做 `pre-wrap` 與 `max-width`，`Gemini` 與其他網頁完全一致，不再單獨破壞 RWD
+  - `youtube-sidepanel-fix` 對 `youtube.com` 窄 `iframe` 僅對 `#columns` 在 `getBoundingClientRect().width > vw` 時才 `flex-direction:column`，`#player` 保持原生 `aspect-ratio` 不強制 `height`
+  - ` manifest.json:4` 版本 `2026.0.20` → `2026.0.21`
+
+---
+
+## [2026.0.20] - 2026-09-01
+
+### 🐞 修正 & 🎨 優化
+
+#### 1. 動畫卡頓、面板跑動（收回/展開）
+- **修復**：`content.css:1` ` #sbx-rail-root` 改 `transform:translateX(0)` + `transition: opacity/transform 0.18s` 並 `will-change`，移除 `0.16s` 延遲；`content.js:359` `setupFixedObserver` 改 `200ms` 節流且僅觀察 `body childList`，`background.js:167` `broadcastShowRail` 僅處理 `activeTab` 避免全視窗注入卡頓
+
+#### 2. YouTube 影片頁與 Gemini 筆記本 UI（統一 RWD）
+- **問題**：Gemini「職涯顧問」與 YouTube 影片頁在 `~360px` 側邊欄內，`nav bar` 正常但對話/標題/推薦等元素溢出被遮
+- **修復**：
+  - 移除 `gemini` 專屬全域 CSS：`iframe-layout-fix` 已限縮至 `chatgpt/claude/perplexity`，Gemini 現與其他網頁一致，沿用原生 RWD（側邊欄內自動收合）
+  - `youtube-sidepanel-fix` 對 `youtube.com` 窄 `iframe` 強制 `#columns` 單欄 `flex-direction:column`，`#player` 保持 `width:100%` 且 `aspect-ratio:16/9`，非影片元素限寬 `max-width:100%`
+  - `manifest.json:4` 版本 `2026.0.19` → `2026.0.20`
+
+---
+
 ## [2026.0.19] - 2026-09-01
 
 ### 🐞 修正 & 🎨 優化
