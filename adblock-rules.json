@@ -88,14 +88,5 @@
       "urlFilter": "||google-analytics.com",
       "resourceTypes": ["script", "xmlhttprequest", "image", "other"]
     }
-  },
-  {
-    "id": 110,
-    "priority": 1,
-    "action": { "type": "block" },
-    "condition": {
-      "urlFilter": "youtube.com/get_video_info*ad",
-      "resourceTypes": ["xmlhttprequest", "other"]
-    }
   }
 ]

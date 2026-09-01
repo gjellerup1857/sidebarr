@@ -10,57 +10,71 @@
     try { return window.self !== window.top; } catch (e) { return false; }
   })();
 
-  // 加速與跳過邏輯
+  let wasAd = false;
+  let adMutedOriginal = null;
+  let adRateOriginal = 1;
+
   const skipAd = () => {
     try {
       const video = document.querySelector('video.html5-main-video, video.video-stream');
       const adShowing = document.querySelector('.ad-showing, .ad-interrupting');
-      const skipBtn = document.querySelector('.ytp-ad-skip-button, .ytp-skip-ad-button, [class*="skip-button"]');
-      
+      const skipBtn = document.querySelector('.ytp-ad-skip-button, .ytp-skip-ad-button, .ytp-ad-skip-button-modern, [class*="skip-button"]');
+
+      // 點擊可跳過按鈕（無論是否偵測到 adShowing，都嘗試點擊）
+      if (skipBtn && skipBtn.offsetParent !== null) {
+        try { skipBtn.click(); } catch (e) {}
+        try { skipBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })); } catch (e) {}
+      }
+
       if (adShowing && video) {
-        // 加速播放以快速跳過不可跳過廣告（不隱藏容器，避免全黑）
+        if (!wasAd) {
+          wasAd = true;
+          try { adMutedOriginal = video.muted; } catch (e) { adMutedOriginal = false; }
+          try { adRateOriginal = video.playbackRate || 1; } catch (e) { adRateOriginal = 1; }
+        }
+        // 僅對廣告影片加速與靜音，不隱藏容器
         try {
           if (!video.muted) video.muted = true;
-          video.playbackRate = 16;
-          // 直接跳至結尾
-          if (video.duration && isFinite(video.duration) && video.currentTime < video.duration - 0.5) {
-            try { video.currentTime = video.duration; } catch (e) {}
+          // 僅在可 seek 時跳至結尾，避免對直播廣告拋錯
+          if (video.duration && isFinite(video.duration) && video.duration > 0 && video.duration < 600 && video.currentTime < video.duration - 0.2) {
+            try { video.currentTime = Math.max(0, video.duration - 0.1); } catch (e) {}
+          } else {
+            // 不可 seek 的廣告，加速播放
+            try { video.playbackRate = 16; } catch (e) {}
           }
           if (video.paused) video.play().catch(() => {});
         } catch (e) {}
-      }
-
-      // 點擊可跳過按鈕
-      if (skipBtn && skipBtn.offsetParent !== null) {
-        skipBtn.click();
-        // 備援：分發點擊事件
+        // 輕量隱藏遮罩，不動主容器
+        document.querySelectorAll('.ytp-ad-player-overlay, #player-ads').forEach(el => {
+          if (el.style.display !== 'none') el.style.display = 'none';
+        });
+      } else if (wasAd && !adShowing && video) {
+        // 廣告剛結束，恢復現場
+        wasAd = false;
         try {
-          skipBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-        } catch (e) {}
-      }
-
-      // 隱藏廣告遮罩
-      document.querySelectorAll('.ytp-ad-module, .ytp-ad-player-overlay, #player-ads').forEach(el => {
-        el.style.display = 'none';
-      });
-
-      // 移除廣告類別，讓播放器恢復（需從實際帶有該類的元素移除，否則影片保持 opacity:0 或黑屏）
-      try {
-        document.querySelectorAll('.ad-showing, .ad-interrupting').forEach(el => {
-          el.classList.remove('ad-showing', 'ad-interrupting');
-        });
-        // YouTube 播放器容器通常為 .html5-video-player
-        document.querySelectorAll('.html5-video-player.ad-showing, .html5-video-player.ad-interrupting').forEach(el => {
-          el.classList.remove('ad-showing', 'ad-interrupting');
-        });
-      } catch (e) {}
-      // 確保影片可見
-      try {
-        if (video) {
+          video.muted = adMutedOriginal !== null ? adMutedOriginal : false;
+          video.playbackRate = adRateOriginal || 1;
           video.style.removeProperty('opacity');
           video.style.removeProperty('display');
-        }
-      } catch (e) {}
+          video.style.removeProperty('visibility');
+          if (video.paused) video.play().catch(() => {});
+        } catch (e) {}
+        // 確保播放器容器可見
+        document.querySelectorAll('.html5-video-player').forEach(el => {
+          try {
+            el.style.removeProperty('display');
+            el.style.removeProperty('opacity');
+            el.style.removeProperty('visibility');
+          } catch (e) {}
+        });
+        // 還原被隱藏的遮罩（讓 YouTube 自行管理）
+        document.querySelectorAll('.ytp-ad-module, .ytp-ad-player-overlay, #player-ads').forEach(el => {
+          try { el.style.removeProperty('display'); } catch (e) {}
+        });
+      } else if (!adShowing) {
+        // 非廣告期間，確保不殘留加速/靜音
+        if (wasAd) wasAd = false;
+      }
     } catch (e) {}
   };
 

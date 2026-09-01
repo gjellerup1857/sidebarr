@@ -4,6 +4,20 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 `2026.0.x`。
 
+## [2026.0.13] - 2026-09-01
+
+### 🐞 修正
+
+#### 1. YouTube 廣告快轉後黑屏 / 持續播廣告
+- **問題**：`v2026.0.12` 廣告雖快轉但 `一直播廣告`，結束後 `黑畫面`；`get_video_info*ad` 阻擋導致主影片無法載入
+- **修復**：
+  - `youtube-adblock.js` 重構 `skipAd()` 為狀態機 `wasAd`：`adShowing` 時記憶 `muted/rate` 並 `muted+16x` + `currentTime=duration-0.1`（僅 `duration<600` 且可 `seek`），否則 `playbackRate=16`；`!wasAd && adShowing` 結束時還原 `muted/rate` 並 `removeProperty(opacity/display)`，移除殘留 `ytp-ad-module` 遮罩；`skipBtn` 無論是否 `adShowing` 皆嘗試點擊
+  - `adblock-rules.json` 移除 `id:110` `youtube.com/get_video_info*ad` 阻擋（會阻擋主影片資訊）
+  - `youtube-adblock.css` 已於 `v2026.0.12` 移除 `opacity:0`，本版保持僅隱藏遮罩
+- `manifest.json:4` 版本 `2026.0.12` → `2026.0.13`
+
+---
+
 ## [2026.0.12] - 2026-09-01
 
 ### 🐞 修正
