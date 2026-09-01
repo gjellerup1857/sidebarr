@@ -4,6 +4,27 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 `2026.0.x`。
 
+## [2026.0.16] - 2026-09-01
+
+### 🐞 緊急修正 & 🎨 優化
+
+#### 1. 側邊欄 YouTube 影片全空白 & 廣告回歸
+- **問題**：點擊 YouTube 影片後全空白，`v2026.0.15` 的 `iframe-layout-fix` 對 `video` 套用 `height:auto` 導致播放器塌陷，`youtube-adblock` 誤隱藏容器
+- **修復**：
+  - `youtube-adblock.css` 移除 `opacity:0`，僅隱藏廣告遮罩；`youtube-adblock.js` 移除 `display:none`，改為僅點擊 `skipBtn`，`isInsideSidePanel` 對 `youtube` 返回 `false`
+  - `iframe-layout-fix` 對 `youtube` 新增 `exclude_matches`，`video/iframe` 僅 `max-width`，移除 `height:auto`
+  - `youtube-sidepanel-fix` 確保 `video` 可見並保持 `16:9`
+
+#### 2. 收回/關閉側邊欄動畫與面板消失回歸
+- **問題**：點擊 `>`/`X` 收回/關閉後，`44px` Rail 偶發消失，且動畫卡頓、面板跑動
+- **修復**：`content.css` 同步 `opacity` 與 `margin-right` 過渡（`0.2s`），移除 `0.16s` 延遲；`content.js` `show()` 同步 `applyBodyRailCompensation` 與 `adjustFixedElements`，`background.js` `broadcastShowRail` 確保所有 `http(s)` 分頁注入並 `showRail` 消息強制顯示
+
+#### 3. YouTube 側邊欄非影片元素溢出（持續優化）
+- `youtube-sidepanel-fix` 對 `youtube.com` 窄 `iframe` 強制單欄 `flex-direction:column`，`#player` 保持 `width:100%`，推薦列表限寬
+- `manifest.json:4` 版本 `2026.0.15` → `2026.0.16`
+
+---
+
 ## [2026.0.15] - 2026-09-01
 
 ### 🎨 優化 & 🐞 修正

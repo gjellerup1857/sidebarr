@@ -12,28 +12,11 @@
 
   const skipAd = () => {
     try {
-      const video = document.querySelector('video.html5-main-video, video.video-stream');
-      const adShowing = document.querySelector('.ad-showing, .ad-interrupting');
       const skipBtn = document.querySelector('.ytp-ad-skip-button, .ytp-skip-ad-button, .ytp-ad-skip-button-modern, .ytp-ad-skip-button-slot, [class*="ytp-ad-skip"]');
-
-      // 優先點擊跳過按鈕（最可靠）
+      // 僅處理可跳過按鈕，不對影片做任何靜音/加速/seek，避免黑屏與持續播廣告的副作用
       if (skipBtn && skipBtn.offsetParent !== null && !skipBtn.disabled) {
         try { skipBtn.click(); } catch (e) {}
         try { skipBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })); } catch (e) {}
-        // 點擊後立即返回，讓 YouTube 自行切換
-        return;
-      }
-
-      if (adShowing && video) {
-        // 對於不可跳過的廣告，靜音並嘗試加速（不強制 seek，避免黑屏）
-        try {
-          if (!video.muted) video.muted = true;
-          // 僅對短廣告（<30s）嘗試加速，不對長廣告 seek 以免觸發 YouTube 錯誤
-          if (video.duration && isFinite(video.duration) && video.duration > 0 && video.duration < 30) {
-            try { video.playbackRate = 2; } catch (e) {}
-          }
-          if (video.paused) video.play().catch(() => {});
-        } catch (e) {}
       }
     } catch (e) {}
   };
