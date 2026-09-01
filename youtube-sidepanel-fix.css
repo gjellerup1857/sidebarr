@@ -1,0 +1,49 @@
+/* YouTube 在側邊欄窄 iframe（~360px）內的非影片元素寬度修正 */
+/* 僅在側邊欄內生效，不影響一般分頁 */
+@media (max-width: 500px) {
+  /* 主容器：強制單欄，避免左右並排導致溢出 */
+  #columns, #primary, #secondary,
+  ytd-watch-flexy[flexy] #columns,
+  ytd-watch-flexy #primary,
+  ytd-watch-flexy #secondary,
+  ytd-two-column-browse-results-renderer,
+  #page-manager, ytd-app {
+    max-width: 100% !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    flex-direction: column !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 影片播放器保持 16:9，不強制 height:auto */
+  #player, #player-container, .html5-video-container, .html5-video-player,
+  video.html5-main-video {
+    max-width: 100% !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 影片以外的內容：標題、說明、留言、推薦 */
+  #primary > *, #secondary > *,
+  ytd-watch-metadata, ytd-video-primary-info-renderer,
+  ytd-video-secondary-info-renderer, #comments, #related,
+  ytd-compact-video-renderer, ytd-rich-item-renderer {
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
+
+  /* 防止長標題、說明文字溢出 */
+  #title, #description, ytd-expander, #content-text {
+    max-width: 100% !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+  }
+
+  /* 推薦影片列表：由橫向改為單欄，避免被遮 */
+  ytd-compact-video-renderer {
+    width: 100% !important;
+  }
+}

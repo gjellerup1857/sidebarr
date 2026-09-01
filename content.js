@@ -216,7 +216,7 @@
       document.documentElement.classList.add('sbx-fullscreen-active');
       document.documentElement.classList.remove('sbx-reserve');
       applyBodyRailCompensation(false);
-      if (typeof adjustFixedElements === 'function') adjustFixedElements();
+      adjustFixedElements();
       return;
     }
     document.documentElement.classList.remove('sbx-fullscreen-active');
@@ -226,13 +226,15 @@
       root.classList.add('sbx-hidden');
       document.documentElement.classList.remove('sbx-reserve');
       applyBodyRailCompensation(false);
+      adjustFixedElements();
     } else {
       root.classList.add('sbx-enter');
       root.classList.remove('sbx-hidden');
       document.documentElement.classList.add('sbx-reserve');
       applyBodyRailCompensation(true);
+      // 同步處理固定元素，避免收回時先出現空白再跳動
+      adjustFixedElements();
     }
-    if (typeof scheduleAdjustFixed === 'function') scheduleAdjustFixed();
   }
 
   // --- 修正部分網頁被面板遮擋（fixed / sticky / 100vw 全寬元素）---

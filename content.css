@@ -22,11 +22,12 @@
   -webkit-user-select: none;
   opacity: 1;
   pointer-events: auto;
-  transition: opacity 0.18s ease;
+  transition: opacity 0.2s ease;
+  will-change: opacity;
 }
 
 #sbx-rail-root.sbx-enter {
-  transition-delay: 0.16s;
+  transition-delay: 0s;
 }
 
 html.sbx-reserve {
@@ -39,6 +40,7 @@ html.sbx-reserve body {
   box-sizing: border-box !important;
   /* 防止 body 本身 100vw 導致溢出 */
   max-width: calc(100vw - var(--sbx-rail-width)) !important;
+  transition: margin-right 0.2s ease, max-width 0.2s ease !important;
 }
 
 html.sbx-reserve body[style*="100vw"],

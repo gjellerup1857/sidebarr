@@ -4,6 +4,24 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 `2026.0.x`。
 
+## [2026.0.15] - 2026-09-01
+
+### 🎨 優化 & 🐞 修正
+
+#### 1. 收回/關閉側邊欄動畫卡頓、面板跑動
+- **問題**：收回或關閉側邊欄時 `44px` Rail 與頁面 `margin-right` 不同步，出現面板跑動與內容跳動
+- **修復**：
+  - `content.css:1,32` ` #sbx-rail-root` 改 `transition: opacity 0.2s ease` 並 `will-change:opacity`，移除 `sbx-enter` 的 `0.16s` 延遲；`html.sbx-reserve body` 新增 `transition: margin-right 0.2s ease, max-width 0.2s ease`
+  - `content.js:212` `show()` 改同步執行 `applyBodyRailCompensation()` 與 `adjustFixedElements()`（移除 `requestAnimationFrame` 延遲），確保 `margin` 與 `fixed` 元素與 Rail 顯隱同幀完成
+
+#### 2. YouTube 側邊欄非影片元素寬度溢出
+- **問題**：側邊欄開啟 YouTube 時，影片本身正常（已無廣告黑屏），但標題、說明、留言、推薦等元素 `width` 超出側邊欄寬度被遮蔽
+- **修復**：
+  - 新增 `youtube-sidepanel-fix.js` / `.css`（`content_scripts` `youtube.com` `all_frames:true` `document_idle`）：當 `window.innerWidth<600` 且在 `iframe` 內時，強制 `#columns/#primary/#secondary/ytd-watch-flexy` 等改 `flex-direction:column; max-width:100%; min-width:0`，`#player` 保持 `width:100%`，推薦列表改單欄；`MutationObserver` + `resize` 動態監聽
+  - `manifest.json:4` 版本 `2026.0.14` → `2026.0.15`
+
+---
+
 ## [2026.0.14] - 2026-09-01
 
 ### 🐞 緊急修正
