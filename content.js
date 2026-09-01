@@ -278,27 +278,44 @@
     } catch (e) { return false; }
   }
 
-  function adjustFixedElements() {
+  // 依 Skill 建議：批次處理大量 DOM，避免阻塞主線程
+  async function adjustFixedElements() {
     if (panelOpen || isFullscreenHidden) {
-      fixedElements.forEach((original, el) => {
-        try {
-          if (original.right !== null) el.style.setProperty('right', original.right);
-          else el.style.removeProperty('right');
-          if (original.width !== null) el.style.setProperty('width', original.width);
-          else el.style.removeProperty('width');
-          if (original.maxWidth !== null) el.style.setProperty('max-width', original.maxWidth);
-          else el.style.removeProperty('max-width');
-        } catch (e) {}
-      });
+      // 還原批次
+      const toRestoreFixed = Array.from(fixedElements.entries());
+      const toRestoreVw = Array.from(vwElements.entries());
+      const BATCH = 20;
+      for (let i = 0; i < toRestoreFixed.length; i += BATCH) {
+        await new Promise(r => requestAnimationFrame(() => {
+          toRestoreFixed.slice(i, i + BATCH).forEach(([el, original]) => {
+            try {
+              if (original.right !== null) el.style.setProperty('right', original.right);
+              else el.style.removeProperty('right');
+              if (original.width !== null) el.style.setProperty('width', original.width);
+              else el.style.removeProperty('width');
+              if (original.maxWidth !== null) el.style.setProperty('max-width', original.maxWidth);
+              else el.style.removeProperty('max-width');
+            } catch (e) {}
+          });
+          r();
+        }));
+        if (globalThis.scheduler?.yield) await scheduler.yield();
+      }
       fixedElements.clear();
-      vwElements.forEach((original, el) => {
-        try {
-          if (original.width !== null) el.style.setProperty('width', original.width);
-          else el.style.removeProperty('width');
-          if (original.maxWidth !== null) el.style.setProperty('max-width', original.maxWidth);
-          else el.style.removeProperty('max-width');
-        } catch (e) {}
-      });
+      for (let i = 0; i < toRestoreVw.length; i += BATCH) {
+        await new Promise(r => requestAnimationFrame(() => {
+          toRestoreVw.slice(i, i + BATCH).forEach(([el, original]) => {
+            try {
+              if (original.width !== null) el.style.setProperty('width', original.width);
+              else el.style.removeProperty('width');
+              if (original.maxWidth !== null) el.style.setProperty('max-width', original.maxWidth);
+              else el.style.removeProperty('max-width');
+            } catch (e) {}
+          });
+          r();
+        }));
+        if (globalThis.scheduler?.yield) await scheduler.yield();
+      }
       vwElements.clear();
       return;
     }
@@ -307,43 +324,49 @@
       if (document.body) candidates.push(document.body);
       if (document.documentElement) candidates.push(document.documentElement);
       candidates.push(...document.querySelectorAll('body *'));
-      for (const el of candidates) {
-        if (!el || el.id === 'sbx-rail-root' || (el.closest && el.closest('#sbx-rail-root'))) continue;
-        // 1) fixed/sticky 全寬貼右
-        if (!fixedElements.has(el) && isFixedOrSticky(el) && shouldAdjustFixed(el)) {
-          const inlineRight = el.style.getPropertyValue('right');
-          const inlineWidth = el.style.getPropertyValue('width');
-          const inlineMaxWidth = el.style.getPropertyValue('max-width');
-          fixedElements.set(el, {
-            right: inlineRight ? inlineRight : null,
-            width: inlineWidth ? inlineWidth : null,
-            maxWidth: inlineMaxWidth ? inlineMaxWidth : null
-          });
-          try {
-            el.style.setProperty('right', '44px', 'important');
-            const cw = getComputedStyle(el).width;
-            if (cw === window.innerWidth + 'px' || el.style.width === '100vw' || getComputedStyle(el).width === '100vw') {
-              el.style.setProperty('width', 'calc(100vw - 44px)', 'important');
-              el.style.setProperty('max-width', 'calc(100vw - 44px)', 'important');
-            } else {
-              el.style.setProperty('max-width', 'calc(100vw - 44px)', 'important');
+      const BATCH = 30;
+      for (let i = 0; i < candidates.length; i += BATCH) {
+        const batch = candidates.slice(i, i + BATCH);
+        await new Promise(r => requestAnimationFrame(() => {
+          for (const el of batch) {
+            if (!el || el.id === 'sbx-rail-root' || (el.closest && el.closest('#sbx-rail-root'))) continue;
+            if (!fixedElements.has(el) && isFixedOrSticky(el) && shouldAdjustFixed(el)) {
+              const inlineRight = el.style.getPropertyValue('right');
+              const inlineWidth = el.style.getPropertyValue('width');
+              const inlineMaxWidth = el.style.getPropertyValue('max-width');
+              fixedElements.set(el, {
+                right: inlineRight ? inlineRight : null,
+                width: inlineWidth ? inlineWidth : null,
+                maxWidth: inlineMaxWidth ? inlineMaxWidth : null
+              });
+              try {
+                el.style.setProperty('right', '44px', 'important');
+                const cw = getComputedStyle(el).width;
+                if (cw === window.innerWidth + 'px' || el.style.width === '100vw' || getComputedStyle(el).width === '100vw') {
+                  el.style.setProperty('width', 'calc(100vw - 44px)', 'important');
+                  el.style.setProperty('max-width', 'calc(100vw - 44px)', 'important');
+                } else {
+                  el.style.setProperty('max-width', 'calc(100vw - 44px)', 'important');
+                }
+              } catch (e) {}
+              continue;
             }
-          } catch (e) {}
-          continue;
-        }
-        // 2) 一般元素的 100vw（非 fixed 亦會被面板遮蓋）
-        if (!vwElements.has(el) && !fixedElements.has(el) && shouldAdjustVw(el)) {
-          const inlineWidth = el.style.getPropertyValue('width');
-          const inlineMaxWidth = el.style.getPropertyValue('max-width');
-          vwElements.set(el, {
-            width: inlineWidth ? inlineWidth : null,
-            maxWidth: inlineMaxWidth ? inlineMaxWidth : null
-          });
-          try {
-            el.style.setProperty('width', 'calc(100vw - 44px)', 'important');
-            el.style.setProperty('max-width', 'calc(100vw - 44px)', 'important');
-          } catch (e) {}
-        }
+            if (!vwElements.has(el) && !fixedElements.has(el) && shouldAdjustVw(el)) {
+              const inlineWidth = el.style.getPropertyValue('width');
+              const inlineMaxWidth = el.style.getPropertyValue('max-width');
+              vwElements.set(el, {
+                width: inlineWidth ? inlineWidth : null,
+                maxWidth: inlineMaxWidth ? inlineMaxWidth : null
+              });
+              try {
+                el.style.setProperty('width', 'calc(100vw - 44px)', 'important');
+                el.style.setProperty('max-width', 'calc(100vw - 44px)', 'important');
+              } catch (e) {}
+            }
+          }
+          r();
+        }));
+        if (globalThis.scheduler?.yield) await scheduler.yield();
       }
     } catch (e) {}
   }
@@ -352,7 +375,7 @@
     if (fixedRaf) cancelAnimationFrame(fixedRaf);
     fixedRaf = requestAnimationFrame(() => {
       fixedRaf = null;
-      adjustFixedElements();
+      adjustFixedElements().catch(() => {});
     });
   }
 
@@ -471,9 +494,13 @@
     setTimeout(checkFullscreenState, 1500);
   })();
 
-  function renderRail() {
+  async function renderRail() {
     siteList.innerHTML = '';
-    sites.forEach((site) => {
+    const BATCH = 20;
+    for (let i = 0; i < sites.length; i += BATCH) {
+      const batch = sites.slice(i, i + BATCH);
+      await new Promise(r => requestAnimationFrame(() => {
+        batch.forEach((site) => {
       const btn = document.createElement('button');
       btn.className = 'sbx-site-btn' + (activeSiteId === site.id ? ' sbx-active' : '');
       btn.title = site.name;
@@ -525,7 +552,11 @@
         reorderSite(dragId, site.id, after);
       });
       siteList.appendChild(btn);
-    });
+        });
+        r();
+      }));
+      if (globalThis.scheduler?.yield) await scheduler.yield();
+    }
   }
 
   function clearDrag() {

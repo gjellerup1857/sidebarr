@@ -4,6 +4,24 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 `2026.0.x`。
 
+## [2026.0.25] - 2026-09-01
+
+### 🎨 優化 & 🐞 修正 (基於 Modern Web Guidance & chrome-extensions Skill)
+
+#### 1. 效能與動畫（1.2 - 收回/展開）
+- **Skill 指引**：`content scripts: don't block main thread` 要求批次處理 + `scheduler.yield`
+- **修復**：
+  - `background.js:34,182`：`fullscreenRestoreMap` 由記憶體 `Map` 改 `chrome.storage.session`（Service Worker 30s 後重啟不丟失）；`chrome.action.onClicked` 與 `chrome.runtime.onMessage` 全面改 `async/await` 並正確 `return true`，`openPanelThen` 與 `chrome.commands` 改 `async/await`，`sidePanel.onOpened/onClosed` 改 `async`
+  - `content.js:281,359,500`：`adjustFixedElements` 與 `renderRail` 改 `async` 批次（`BATCH 20/30` + `requestAnimationFrame` + `scheduler.yield`），`scheduleAdjustFixed` 正確 `await`，`setupFixedObserver` 僅觀察 `body childList` 並 `200ms` 節流
+
+#### 2. YouTube / Gemini 穩定性（統一 RWD）
+- **Skill 指引**：`side panel must provide open trigger` 與 `declarativeNetRequest` 最佳實踐
+- **修復**：
+  - **統一 RWD**：`iframe-layout-fix` 已限縮至 `chatgpt/claude/perplexity` 並僅處理 `pre/code/table` 真正溢出，`gemini` 與 `notebooklm` 現與其他網頁一致（移除全域 `min-width/max-width`），`youtube-sidepanel-fix` 僅在 `YouTube` 窄 `iframe` 且 `#columns` 實際溢出時才 `flex-direction:column`
+  - `manifest.json:4` 版本 `2026.0.24` → `2026.0.25`
+
+---
+
 ## [2026.0.24] - 2026-09-01
 
 ### 🔥 緊急修復

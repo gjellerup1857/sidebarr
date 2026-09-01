@@ -8,36 +8,51 @@ chrome.runtime.onInstalled.addListener(resetPanelBehavior);
 chrome.runtime.onStartup.addListener(resetPanelBehavior);
 
 try {
-  chrome.sidePanel.onOpened.addListener((info) => {
-    chrome.storage.local.set({ panelOpen: true }).catch(() => {});
+  chrome.sidePanel.onOpened.addListener(async (info) => {
+    try { await chrome.storage.local.set({ panelOpen: true }); } catch (e) {}
   });
 } catch (e) {}
 
 try {
-  chrome.sidePanel.onClosed.addListener((info) => {
-    chrome.storage.local.set({ panelOpen: false }).then(() => {
-      ensurePageRail(info && info.windowId);
-    }).catch(() => {});
+  chrome.sidePanel.onClosed.addListener(async (info) => {
+    try {
+      await chrome.storage.local.set({ panelOpen: false });
+      await ensurePageRail(info && info.windowId);
+    } catch (e) {}
   });
 } catch (e) {}
 
-chrome.action.onClicked.addListener((tab) => {
-  const openPromise = chrome.sidePanel.open({ windowId: tab.windowId });
-  openPromise
-    .then(() => chrome.storage.local.set({ panelOpen: true }))
-    .catch(() => {
-      chrome.action.setBadgeText({ text: '!' }).catch(() => {});
+chrome.action.onClicked.addListener(async (tab) => {
+  try {
+    await chrome.sidePanel.open({ windowId: tab.windowId });
+    await chrome.storage.local.set({ panelOpen: true });
+  } catch (e) {
+    try {
+      await chrome.action.setBadgeText({ text: '!' });
       setTimeout(() => chrome.action.setBadgeText({ text: '' }).catch(() => {}), 2500);
-    });
+    } catch (err) {}
+  }
 });
 
 const GOOGLE_URL = 'https://www.google.com/';
 let lastToggleAt = 0;
-const fullscreenRestoreMap = new Map();
+// Service Worker 可能在 30s 閒置後終止，狀態改由 chrome.storage.session 持久化
+async function getFullscreenRestoreMap() {
+  try {
+    const { sbxFullscreenMap = {} } = await chrome.storage.session.get('sbxFullscreenMap');
+    return new Map(Object.entries(sbxFullscreenMap));
+  } catch (e) { return new Map(); }
+}
+async function setFullscreenRestoreMap(map) {
+  try { await chrome.storage.session.set({ sbxFullscreenMap: Object.fromEntries(map) }); } catch (e) {}
+}
 
-chrome.commands.onCommand.addListener((command) => {
+chrome.commands.onCommand.addListener(async (command) => {
   if (command !== 'toggle-panel') return;
-  resolveFocusedWindowId().then((windowId) => handleToggle(windowId)).catch(() => {});
+  try {
+    const windowId = await resolveFocusedWindowId();
+    await handleToggle(windowId);
+  } catch (e) {}
 });
 
 async function resolveFocusedWindowId() {
@@ -65,66 +80,49 @@ async function handleToggle(windowId) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'getThemeColor') {
-    getThemeColor().then(sendResponse);
-    return true;
-  }
-  if (message.type === 'addDynamicRule') {
-    addDynamicRule(message.url).then(sendResponse);
-    return true;
-  }
-  if (message.type === 'addCurrentSite') {
-    addCurrentSite().then(sendResponse);
-    return true;
-  }
-  if (message.type === 'openSite') {
-    openPanelThen(() => openSite(message.siteId, message.url), sender).then(sendResponse);
-    return true;
-  }
-  if (message.type === 'closeSite') {
-    resolveWindowId(message.windowId, sender)
-      .then((windowId) => closePanel(windowId).then(sendResponse));
-    return true;
-  }
-  if (message.type === 'expandGoogle') {
-    openPanelThen(expandGoogle, sender).then(sendResponse);
-    return true;
-  }
-  if (message.type === 'togglePanel') {
-    resolveWindowId(message.windowId, sender)
-      .then((windowId) => handleToggle(windowId))
-      .then(sendResponse);
-    return true;
-  }
-  if (message.type === 'getShortcutInfo') {
-    getShortcutInfo().then(sendResponse);
-    return true;
-  }
-  if (message.type === 'openShortcutsPage') {
-    chrome.tabs.create({ url: 'chrome://extensions/shortcuts' }).catch(() => {});
-    sendResponse({ ok: true });
-    return true;
-  }
-  if (message.type === 'youtubeFullscreenEnter') {
-    handleFullscreenEnter(sender).then(sendResponse);
-    return true;
-  }
-  if (message.type === 'youtubeFullscreenExit') {
-    handleFullscreenExit(sender).then(sendResponse);
-    return true;
-  }
-  if (message.type === 'sbx-copy-text') {
-    handleCopyText(message.text, sender).then(sendResponse);
-    return true;
-  }
+  (async () => {
+    try {
+      if (message.type === 'getThemeColor') {
+        sendResponse(await getThemeColor());
+      } else if (message.type === 'addDynamicRule') {
+        sendResponse(await addDynamicRule(message.url));
+      } else if (message.type === 'addCurrentSite') {
+        sendResponse(await addCurrentSite());
+      } else if (message.type === 'openSite') {
+        sendResponse(await openPanelThen(() => openSite(message.siteId, message.url), sender));
+      } else if (message.type === 'closeSite') {
+        const windowId = await resolveWindowId(message.windowId, sender);
+        sendResponse(await closePanel(windowId));
+      } else if (message.type === 'expandGoogle') {
+        sendResponse(await openPanelThen(expandGoogle, sender));
+      } else if (message.type === 'togglePanel') {
+        const windowId = await resolveWindowId(message.windowId, sender);
+        sendResponse(await handleToggle(windowId));
+      } else if (message.type === 'getShortcutInfo') {
+        sendResponse(await getShortcutInfo());
+      } else if (message.type === 'openShortcutsPage') {
+        await chrome.tabs.create({ url: 'chrome://extensions/shortcuts' }).catch(() => {});
+        sendResponse({ ok: true });
+      } else if (message.type === 'youtubeFullscreenEnter') {
+        sendResponse(await handleFullscreenEnter(sender));
+      } else if (message.type === 'youtubeFullscreenExit') {
+        sendResponse(await handleFullscreenExit(sender));
+      } else if (message.type === 'sbx-copy-text') {
+        sendResponse(await handleCopyText(message.text, sender));
+      }
+    } catch (e) {
+      try { sendResponse({ ok: false, error: e.message }); } catch (_) {}
+    }
+  })();
+  return true;
 });
 
-function openPanelThen(fn, sender) {
+async function openPanelThen(fn, sender) {
   const winId = sender && sender.tab ? sender.tab.windowId : null;
-  const openPromise = winId != null
-    ? chrome.sidePanel.open({ windowId: winId }).catch(() => null)
-    : Promise.resolve(null);
-  return openPromise.then(fn);
+  if (winId != null) {
+    try { await chrome.sidePanel.open({ windowId: winId }); } catch (e) {}
+  }
+  return fn();
 }
 
 async function openSite(siteId, url) {
@@ -191,7 +189,9 @@ async function handleFullscreenEnter(sender) {
     if (wid == null) return { ok: false };
     const data = await chrome.storage.local.get(['panelOpen']);
     const wasOpen = !!data.panelOpen;
-    fullscreenRestoreMap.set(wid, wasOpen);
+    const map = await getFullscreenRestoreMap();
+    map.set(String(wid), wasOpen);
+    await setFullscreenRestoreMap(map);
     if (wasOpen) {
       await closePanel(wid);
       return { ok: true, closed: true };
@@ -212,8 +212,10 @@ async function handleFullscreenExit(sender) {
       } catch (e) {}
     }
     if (wid == null) return { ok: false };
-    const wasOpen = fullscreenRestoreMap.get(wid);
-    fullscreenRestoreMap.delete(wid);
+    const map = await getFullscreenRestoreMap();
+    const wasOpen = map.get(String(wid));
+    map.delete(String(wid));
+    await setFullscreenRestoreMap(map);
     if (!wasOpen) return { ok: true, reopened: false };
     const cur = await chrome.storage.local.get(['panelOpen']);
     if (cur.panelOpen) return { ok: true, reopened: false };

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Sidebarr 瀏覽器側邊欄工具",
-  "version": "2026.0.24",
+  "version": "2026.0.25",
   "description": "頁面內建常駐面板列，一鍵加入常用網站並在側邊欄開啟，面板列永遠停靠瀏覽器最右側",
   "permissions": [
     "storage",
@@ -50,10 +50,10 @@
     },
     {
       "matches": ["*://*.youtube.com/*", "*://youtube.com/*", "*://*.youtube-nocookie.com/*", "*://youtube-nocookie.com/*"],
-      "js": ["youtube-adblock.js"],
-      "css": ["youtube-adblock.css"],
+      "js": ["youtube-sidepanel-fix.js"],
+      "css": ["youtube-sidepanel-fix.css"],
       "all_frames": true,
-      "run_at": "document_start"
+      "run_at": "document_idle"
     }
   ],
   "side_panel": {
