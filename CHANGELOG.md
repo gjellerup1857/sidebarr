@@ -4,6 +4,30 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 `2026.0.x`。
 
+## [2026.0.23] - 2026-09-01
+
+### 🔥 緊急修復
+
+#### 1. YouTube 點擊後全黑 / 排版跑版
+- **問題**：`v2026.0.22` 即使移除 `youtube-sidepanel-fix`，`youtube-adblock` 的 `skipBtn` 邏輯與 `adblock-rules` 仍可能在特定影片觸發黑屏，且 `iframe-layout-fix` 對 `gemini` 的殘留仍影響
+- **修復**：`manifest.json:44` 暫時**停用所有 YouTube 與 Gemini 的側邊欄注入**（移除 `youtube-adblock` / `youtube-sidepanel-fix` 與 `gemini` 的 `iframe-layout-fix`），使兩站點在側邊欄內完全沿用原生 RWD 與 Brave Shields，確保影片可見且不再因 `height:auto` 或 `ad` 攔截而黑屏；`iframe-layout-fix` 現僅對 `chatgpt/claude/perplexity` 生效
+- `manifest.json:4` 版本 `2026.0.22` → `2026.0.23`
+
+---
+
+## [2026.0.22] - 2026-09-01
+
+### 🔥 Hotfix
+
+#### YouTube 側邊欄影片全白
+- **問題**：`v2026.0.21` 的 `youtube-sidepanel-fix` 對 `#columns/#player` 強制 `flex-direction:column` 與 `width:100%` 導致播放器高度塌陷，全白
+- **修復**：`manifest.json` 暫時移除 `youtube-sidepanel-fix.js/css` 的注入，YouTube 側邊欄恢復原生 RWD，僅保留 `youtube-adblock` 的 `skipBtn` 點擊（不對 `video` 做 `muted/playbackRate` 干預）
+
+#### 其他
+- `manifest.json:4` 版本 `2026.0.21` → `2026.0.22`
+
+---
+
 ## [2026.0.21] - 2026-09-01
 
 ### 🎨 優化 & 🐞 修正
