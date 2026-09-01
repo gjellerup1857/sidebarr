@@ -166,16 +166,16 @@ async function closePanel(windowId) {
 
 async function broadcastShowRail(windowId) {
   try {
-    const tabs = windowId != null ? await chrome.tabs.query({ windowId }) : await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-    for (const tab of tabs) {
-      if (!tab.id || !tab.url || !/^https?:/.test(tab.url)) continue;
-      try { await chrome.tabs.sendMessage(tab.id, { type: 'showRail' }); } catch (e) {}
-      // 同時嘗試直接注入以防 content 未注入
-      try {
-        await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
-        await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['content.css'] });
-      } catch (e) {}
-    }
+    // 優化：僅處理當前 active 分頁，避免對同視窗所有分頁注入造成卡頓與面板跑動
+    const query = windowId != null ? { active: true, windowId } : { active: true, lastFocusedWindow: true };
+    const tabs = await chrome.tabs.query(query);
+    const tab = tabs[0];
+    if (!tab || !tab.id || !tab.url || !/^https?:/.test(tab.url)) return;
+    try { await chrome.tabs.sendMessage(tab.id, { type: 'showRail' }); } catch (e) {}
+    try {
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+      await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['content.css'] });
+    } catch (e) {}
   } catch (e) {}
 }
 
@@ -276,30 +276,18 @@ async function handleCopyText(text, sender) {
 
 async function ensurePageRail(windowId) {
   try {
-    // 確保關閉側邊欄後，Rail 一定留在瀏覽器上：
-    // 1) 對當前視窗的所有 http(s) 分頁嘗試注入（避免僅 active 分頁生效）
-    // 2) 同時觸發儲存變更，讓已注入的頁面透過 onChanged 立即 show()
     await chrome.storage.local.set({ panelOpen: false }).catch(() => {});
+    const query = windowId != null ? { active: true, windowId } : { active: true, lastFocusedWindow: true };
     let tabs = [];
+    try { tabs = await chrome.tabs.query(query); } catch (e) { tabs = []; }
+    const tab = tabs[0];
+    if (!tab || !tab.id || !tab.url || !/^https?:/.test(tab.url)) return;
+    if (/^chrome-extension:/.test(tab.url)) return;
     try {
-      if (windowId != null) {
-        tabs = await chrome.tabs.query({ windowId });
-      } else {
-        tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-      }
-    } catch (e) { tabs = []; }
-    // 若 windowId 指定，優先處理該視窗全部 http(s) 分頁，否則僅 active
-    const targets = windowId != null ? tabs.filter(t => t.url && /^https?:/.test(t.url)) : tabs.slice(0,1).filter(t => t.url && /^https?:/.test(t.url));
-    for (const tab of targets) {
-      if (!tab.id || !tab.url) continue;
-      if (/^chrome-extension:/.test(tab.url)) continue;
-      try {
-        await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
-        await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['content.css'] });
-      } catch (e) {}
-      try { await chrome.tabs.sendMessage(tab.id, { type: 'showRail' }); } catch (e) {}
-    }
-    // 若沒有可注入的 tab，仍確保儲存狀態已為 false，讓下次開啟的 http(s) 頁面 init 時顯示 Rail
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+      await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['content.css'] });
+    } catch (e) {}
+    try { await chrome.tabs.sendMessage(tab.id, { type: 'showRail' }); } catch (e) {}
   } catch (e) {}
 }
 

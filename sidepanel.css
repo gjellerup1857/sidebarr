@@ -37,11 +37,8 @@ body {
   min-width: 0;
   position: relative;
   overflow: hidden;
-  overflow-x: hidden;
   background: #fff;
   transition: background 0.15s ease;
-  /* 防止內部 iframe 內容因 100vw 溢出 */
-  contain: layout style;
 }
 
 #site-frame {

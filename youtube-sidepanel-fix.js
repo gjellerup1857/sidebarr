@@ -12,33 +12,24 @@
 
   const fix = () => {
     try {
-      // 強制單欄：將 #columns 的 flex 方向改為 column，避免 secondary 被擠到面板外
+      // 僅在真正溢出時才調整，避免破壞 YouTube 原生 RWD
+      const vw = window.innerWidth;
       const columns = document.querySelector('#columns');
-      if (columns) {
-        columns.style.setProperty('flex-direction', 'column', 'important');
+      if (columns && columns.getBoundingClientRect().width > vw) {
         columns.style.setProperty('max-width', '100%', 'important');
         columns.style.setProperty('min-width', '0', 'important');
+        // 僅當 secondary 會超出時才改為單欄
+        if (columns.getBoundingClientRect().width > vw * 1.1) {
+          columns.style.setProperty('flex-direction', 'column', 'important');
+        }
       }
-      const primary = document.querySelector('#primary');
-      const secondary = document.querySelector('#secondary');
-      [primary, secondary].forEach(el => {
+      document.querySelectorAll('#primary, #secondary').forEach(el => {
         if (!el) return;
-        el.style.setProperty('max-width', '100%', 'important');
-        el.style.setProperty('min-width', '0', 'important');
-        el.style.setProperty('width', '100%', 'important');
-        el.style.setProperty('margin-left', '0', 'important');
-        el.style.setProperty('margin-right', '0', 'important');
-      });
-      // 影片容器保持比例
-      const player = document.querySelector('#player');
-      if (player) {
-        player.style.setProperty('max-width', '100%', 'important');
-        player.style.setProperty('min-width', '0', 'important');
-      }
-      // 推薦列表
-      document.querySelectorAll('ytd-compact-video-renderer, ytd-rich-item-renderer').forEach(el => {
-        el.style.setProperty('max-width', '100%', 'important');
-        el.style.setProperty('min-width', '0', 'important');
+        const r = el.getBoundingClientRect();
+        if (r.width > vw) {
+          el.style.setProperty('max-width', '100%', 'important');
+          el.style.setProperty('min-width', '0', 'important');
+        }
       });
     } catch (e) {}
   };

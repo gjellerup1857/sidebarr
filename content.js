@@ -359,10 +359,21 @@
   function setupFixedObserver() {
     if (fixedObserver) return;
     try {
-      fixedObserver = new MutationObserver(scheduleAdjustFixed);
-      fixedObserver.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+      // 優化：降低觀察頻率，僅在 Rail 顯示時才處理，避免收回/關閉時的卡頓
+      let throttleTimer = null;
+      const throttledSchedule = () => {
+        if (throttleTimer) return;
+        throttleTimer = setTimeout(() => {
+          throttleTimer = null;
+          scheduleAdjustFixed();
+        }, 200);
+      };
+      fixedObserver = new MutationObserver(() => {
+        if (!panelOpen && !isFullscreenHidden) throttledSchedule();
+      });
+      fixedObserver.observe(document.body, { childList: true, subtree: false });
       window.addEventListener('resize', scheduleAdjustFixed);
-      window.addEventListener('scroll', scheduleAdjustFixed, { passive: true });
+      // 移除 scroll 監聽，減少滾動時的卡頓
     } catch (e) {}
   }
 

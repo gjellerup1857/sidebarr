@@ -15,23 +15,11 @@
     box-sizing: border-box !important;
   }
 
-  /* 影片播放器保持 16:9，強制可見 */
-  #player, #player-container, .html5-video-container, .html5-video-player,
-  video.html5-main-video, video.video-stream {
+  /* 影片播放器：僅限制寬度，不強制高度或顯示，避免黑屏 */
+  #player, #player-container, .html5-video-container, .html5-video-player {
     max-width: 100% !important;
-    width: 100% !important;
     min-width: 0 !important;
     box-sizing: border-box !important;
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-  }
-
-  /* 確保播放器在側邊欄內有正確高度（16:9） */
-  #player {
-    aspect-ratio: 16 / 9 !important;
-    height: auto !important;
-    min-height: 200px !important;
   }
 
   /* 影片以外的內容：標題、說明、留言、推薦 */

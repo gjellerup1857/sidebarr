@@ -4,24 +4,35 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 `2026.0.x`。
 
-## [2026.0.16] - 2026-09-01
+## [2026.0.19] - 2026-09-01
 
-### 🐞 緊急修正 & 🎨 優化
+### 🐞 修正 & 🎨 優化
 
-#### 1. 側邊欄 YouTube 影片全空白 & 廣告回歸
-- **問題**：點擊 YouTube 影片後全空白，`v2026.0.15` 的 `iframe-layout-fix` 對 `video` 套用 `height:auto` 導致播放器塌陷，`youtube-adblock` 誤隱藏容器
+#### 1. 移除 Gemini 專屬 CSS，統一 RWD
+- **問題**：`v2026.0.17/18` 為 Gemini 加入的 `iframe-layout-fix` 使其在側邊欄內如圖中「支付科技」頁面跑版，且連帶影響其他網頁
+- **修復**：`manifest.json:44` 將 `iframe-layout-fix` 的 `matches` 限縮至僅 ChatGPT/Claude/Perplexity（移除 `gemini.google.com / aistudio.google.com`），`iframe-layout-fix.css/js` 移除 `div/main/c-wiz` 全域收縮，僅保留 `pre/code/table/img` 的溢出處理；Gemini 現與其他網頁一致，沿用原生 RWD
+
+#### 2. YouTube 側邊欄影片全空白
+- **問題**：`youtube-sidepanel-fix` 對 `#player` 強制 `aspect-ratio` 與 `height` 導致高度塌陷，加上 `youtube-adblock` 誤判
+- **修復**：`youtube-sidepanel-fix.css` 移除 `aspect-ratio/height` 強制，僅保留 `max-width:100%`；`youtube-adblock.js` 簡化為僅點擊 `skipBtn`，不對 `video` 做 `muted/playbackRate` 干預；`sidepanel.css:35` 移除 `#main` 的 `contain:layout`，`manifest` 暫時停用 `youtube-sidepanel-fix` 對 YouTube 的版面強制，僅保留 `adblock`
+
+#### 3. 收回/關閉動畫卡頓、面板跑動
+- **修復**：`background.js:167,277` `broadcastShowRail` / `ensurePageRail` 改為僅處理 `activeTab`（原對同視窗所有分頁注入造成卡頓）；`content.js:359` `setupFixedObserver` 改為僅觀察 `document.body childList` 並 `200ms` 節流，移除 `scroll` 監聽與 `subtree` 全量觀察
+
+- `manifest.json:4` 版本 `2026.0.18` → `2026.0.19`
+
+---
+
+## [2026.0.18] - 2026-09-01
+
+### 🐞 修正
+
+#### 1. 影片全空白回歸 & 統一 RWD 導致 Gemini 再次跑版
+- **問題**：`v2026.0.17` 為解決 Gemini 跑版而將 `iframe-layout-fix` 全域收縮，卻使 Gemini 再次如圖中深色列表被壓扁，且 `youtube-adblock` 誤隱藏 `video` 導致側邊欄 YouTube 全空白
 - **修復**：
-  - `youtube-adblock.css` 移除 `opacity:0`，僅隱藏廣告遮罩；`youtube-adblock.js` 移除 `display:none`，改為僅點擊 `skipBtn`，`isInsideSidePanel` 對 `youtube` 返回 `false`
-  - `iframe-layout-fix` 對 `youtube` 新增 `exclude_matches`，`video/iframe` 僅 `max-width`，移除 `height:auto`
-  - `youtube-sidepanel-fix` 確保 `video` 可見並保持 `16:9`
-
-#### 2. 收回/關閉側邊欄動畫與面板消失回歸
-- **問題**：點擊 `>`/`X` 收回/關閉後，`44px` Rail 偶發消失，且動畫卡頓、面板跑動
-- **修復**：`content.css` 同步 `opacity` 與 `margin-right` 過渡（`0.2s`），移除 `0.16s` 延遲；`content.js` `show()` 同步 `applyBodyRailCompensation` 與 `adjustFixedElements`，`background.js` `broadcastShowRail` 確保所有 `http(s)` 分頁注入並 `showRail` 消息強制顯示
-
-#### 3. YouTube 側邊欄非影片元素溢出（持續優化）
-- `youtube-sidepanel-fix` 對 `youtube.com` 窄 `iframe` 強制單欄 `flex-direction:column`，`#player` 保持 `width:100%`，推薦列表限寬
-- `manifest.json:4` 版本 `2026.0.15` → `2026.0.16`
+  - `iframe-layout-fix` 全面回退：`manifest.json:44` 限縮 `matches` 僅 `gemini/chatgpt/claude/perplexity`，`css` 移除 `div/main/c-wiz` 全域 `min-width/max-width` 與 `* {box-sizing}`，僅保留 `pre/code/table/img` 長內容 `pre-wrap`；`js` 僅掃描真正溢出的 `pre,code,table,img` 不動整體佈局
+  - `youtube-adblock` / `youtube-sidepanel-fix` 解耦：`adblock` 僅 `skipBtn` 點擊，`sidepanel-fix` 對 `youtube` 單獨處理 `flex-direction:column`，兩者不再互相干擾
+  - `manifest.json:4` 版本 `2026.0.17` → `2026.0.18`
 
 ---
 
@@ -45,6 +56,24 @@
 ### 🐞 緊急修正 & 🎨 優化
 
 #### 1. 側邊欄 YouTube 影片全空白 & 廣告回歸
+- **問題**：收回或關閉側邊欄時 `44px` Rail 與頁面 `margin-right` 不同步，出現面板跑動與內容跳動
+- **修復**：
+  - `content.css:1,32` ` #sbx-rail-root` 改 `transition: opacity 0.2s ease` 並 `will-change:opacity`，移除 `sbx-enter` 的 `0.16s` 延遲；`html.sbx-reserve body` 新增 `transition: margin-right 0.2s ease, max-width 0.2s ease`
+  - `content.js:212` `show()` 改同步執行 `applyBodyRailCompensation()` 與 `adjustFixedElements()`（移除 `requestAnimationFrame` 延遲），確保 `margin` 與 `fixed` 元素與 Rail 顯隱同幀完成
+
+#### 2. YouTube 側邊欄非影片元素寬度溢出
+- **問題**：側邊欄開啟 YouTube 時，影片本身正常（已無廣告黑屏），但標題、說明、留言、推薦等元素 `width` 超出側邊欄寬度被遮蔽
+- **修復**：
+  - 新增 `youtube-sidepanel-fix.js` / `.css`（`content_scripts` `youtube.com` `all_frames:true` `document_idle`）：當 `window.innerWidth<600` 且在 `iframe` 內時，強制 `#columns/#primary/#secondary/ytd-watch-flexy` 等改 `flex-direction:column; max-width:100%; min-width:0`，`#player` 保持 `width:100%`，推薦列表改單欄；`MutationObserver` + `resize` 動態監聽
+  - `manifest.json:4` 版本 `2026.0.14` → `2026.0.15`
+
+---
+
+## [2026.0.15] - 2026-09-01
+
+### 🎨 優化 & 🐞 修正
+
+#### 1. 收回/關閉側邊欄動畫卡頓、面板跑動
 - **問題**：收回或關閉側邊欄時 `44px` Rail 與頁面 `margin-right` 不同步，出現面板跑動與內容跳動
 - **修復**：
   - `content.css:1,32` ` #sbx-rail-root` 改 `transition: opacity 0.2s ease` 並 `will-change:opacity`，移除 `sbx-enter` 的 `0.16s` 延遲；`html.sbx-reserve body` 新增 `transition: margin-right 0.2s ease, max-width 0.2s ease`

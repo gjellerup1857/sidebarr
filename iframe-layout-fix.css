@@ -1,40 +1,22 @@
-/* AI 站點窄側邊欄內的長內容修正 - 僅針對溢出元素，不影響整體 RWD */
+/* AI 站點窄側邊欄內的長內容修正 - 極小侵入，僅處理真正溢出的 code/table */
 @media (max-width: 700px) {
-  /* 長程式碼與表格：允許換行與橫向捲動，避免撐寬對話區 */
-  pre, code, pre code, .markdown pre, .markdown code {
+  pre, code {
     white-space: pre-wrap !important;
     word-break: break-word !important;
     overflow-wrap: break-word !important;
     max-width: 100% !important;
-    overflow-x: auto !important;
     box-sizing: border-box !important;
   }
-
+  pre {
+    overflow-x: auto !important;
+  }
   table {
     display: block !important;
     max-width: 100% !important;
     overflow-x: auto !important;
   }
-
-  img, canvas, svg {
+  img, canvas {
     max-width: 100% !important;
     height: auto !important;
-    box-sizing: border-box !important;
-  }
-
-  video, iframe {
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  /* 僅對話內容容器做最小收縮修正，不動整體佈局容器 */
-  [data-test-id="conversation"] [data-test-id="message"],
-  .conversation-container .message,
-  .chat-container .message,
-  .response-container {
-    min-width: 0 !important;
-    max-width: 100% !important;
-    overflow-x: hidden !important;
-    box-sizing: border-box !important;
   }
 }
