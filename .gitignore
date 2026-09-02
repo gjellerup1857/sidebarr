@@ -3,3 +3,4 @@ _metadata/
 *.zip
 .agents/
 skills-lock.json
+crawler-app/

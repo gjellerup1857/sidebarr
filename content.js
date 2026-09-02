@@ -320,13 +320,18 @@
       return;
     }
     try {
-      const candidates = [];
-      if (document.body) candidates.push(document.body);
-      if (document.documentElement) candidates.push(document.documentElement);
-      candidates.push(...document.querySelectorAll('body *'));
-      const BATCH = 30;
-      for (let i = 0; i < candidates.length; i += BATCH) {
-        const batch = candidates.slice(i, i + BATCH);
+      // 極致優化：僅掃描可能溢出的特定選擇器，而非全部 body *
+      const selector = 'header, nav, div[style*="fixed"], div[style*="sticky"], div[style*="100vw"], body, html';
+      const candidates = document.querySelectorAll(selector);
+      const all = [];
+      if (document.body) all.push(document.body);
+      if (document.documentElement) all.push(document.documentElement);
+      all.push(...candidates);
+      // 去重
+      const uniq = Array.from(new Set(all));
+      const BATCH = 20;
+      for (let i = 0; i < uniq.length; i += BATCH) {
+        const batch = uniq.slice(i, i + BATCH);
         await new Promise(r => requestAnimationFrame(() => {
           for (const el of batch) {
             if (!el || el.id === 'sbx-rail-root' || (el.closest && el.closest('#sbx-rail-root'))) continue;
@@ -341,13 +346,7 @@
               });
               try {
                 el.style.setProperty('right', '44px', 'important');
-                const cw = getComputedStyle(el).width;
-                if (cw === window.innerWidth + 'px' || el.style.width === '100vw' || getComputedStyle(el).width === '100vw') {
-                  el.style.setProperty('width', 'calc(100vw - 44px)', 'important');
-                  el.style.setProperty('max-width', 'calc(100vw - 44px)', 'important');
-                } else {
-                  el.style.setProperty('max-width', 'calc(100vw - 44px)', 'important');
-                }
+                el.style.setProperty('max-width', 'calc(100vw - 44px)', 'important');
               } catch (e) {}
               continue;
             }
@@ -382,21 +381,20 @@
   function setupFixedObserver() {
     if (fixedObserver) return;
     try {
-      // 優化：降低觀察頻率，僅在 Rail 顯示時才處理，避免收回/關閉時的卡頓
+      // 極致優化：僅在 Rail 顯示時處理，且大幅降低頻率，恢復至 v2026.0.15 前的順暢度
       let throttleTimer = null;
       const throttledSchedule = () => {
+        if (panelOpen || isFullscreenHidden) return;
         if (throttleTimer) return;
         throttleTimer = setTimeout(() => {
           throttleTimer = null;
           scheduleAdjustFixed();
-        }, 200);
+        }, 500);
       };
-      fixedObserver = new MutationObserver(() => {
-        if (!panelOpen && !isFullscreenHidden) throttledSchedule();
-      });
-      fixedObserver.observe(document.body, { childList: true, subtree: false });
-      window.addEventListener('resize', scheduleAdjustFixed);
-      // 移除 scroll 監聽，減少滾動時的卡頓
+      fixedObserver = new MutationObserver(throttledSchedule);
+      // 僅觀察 body 的直接子節點新增/移除，不觀察 subtree 與屬性，避免大量觸發
+      if (document.body) fixedObserver.observe(document.body, { childList: true });
+      window.addEventListener('resize', throttledSchedule);
     } catch (e) {}
   }
 
@@ -467,31 +465,9 @@
         const mo = new MutationObserver(checkFullscreenState);
         mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
         if (document.body) mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-        const observePlayer = () => {
-          const p = document.querySelector('#movie_player, #player, .html5-video-player');
-          if (p) mo.observe(p, { attributes: true, attributeFilter: ['class'] });
-        };
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', () => {
-            observePlayer();
-            checkFullscreenState();
-          });
-        } else {
-          observePlayer();
-        }
-        const bodyMo = new MutationObserver(() => {
-          checkFullscreenState();
-          observePlayer();
-        });
-        const startBodyObserve = () => {
-          if (document.body) bodyMo.observe(document.body, { childList: true, subtree: true });
-        };
-        if (document.body) startBodyObserve();
-        else document.addEventListener('DOMContentLoaded', startBodyObserve);
       } catch (e) {}
     }
-    setTimeout(checkFullscreenState, 500);
-    setTimeout(checkFullscreenState, 1500);
+    setTimeout(checkFullscreenState, 800);
   })();
 
   async function renderRail() {

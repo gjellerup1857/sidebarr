@@ -4,6 +4,26 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 `2026.0.x`。
 
+## [2026.0.28] - 2026-09-01
+
+### ⚡ 效能緊急修正 - 解決 Brave 嚴重卡頓
+
+#### 卡頓根因分析
+- 經 `chrome-extensions` Skill 審查，`v2026.0.17-26` 引入多組高頻觀察器與輪詢，疊加後使 Brave 主線程阻塞：
+  - `content.js:359,500` `setupFixedObserver` 觀察 `document.documentElement subtree:true` 且每次 `Mutation` 遍歷 `document.querySelectorAll('body *')`（`O(n)`，`n` 隨 Gemini/YouTube DOM 膨脹）
+  - `youtube-adblock.js:38` `MutationObserver` 觀察 `documentElement subtree:true` + `setInterval(500ms)` + `timeupdate` 高頻觸發
+  - `iframe-layout-fix.js` / `unified-sidepanel-fix.js` 各自 `MutationObserver` + `ResizeObserver` + `setTimeout 800/2000/4000`
+  - 三組觀察器在 `all_frames:true` 的 `iframe` 內同時運行，Brave 多分頁時呈指數放大
+
+#### 修復
+- `content.js:359` `setupFixedObserver` 改僅觀察 `document.body childList` 並 `200ms` 節流，移除 `subtree` 與 `scroll` 監聽；`adjustFixedElements` / `renderRail` 改 `BATCH 20/30 + requestAnimationFrame + scheduler.yield`，僅掃描 `header/nav/[style*="fixed"]` 等特定選擇器而非全部 `body *`
+- `youtube-adblock.js:38` 改僅觀察 `#movie_player` 的 `class`，輪詢由 `500ms` → `2000ms`，移除 `timeupdate` 監聽
+- `iframe-layout-fix.js` / `unified-sidepanel-fix.js` 改僅 `body childList` 觀察，`setTimeout` 由 `3` 次減為 `1` 次
+- `background.js:34` `fullscreenRestoreMap` 由記憶體 `Map` 改 `chrome.storage.session`，避免 SW 重啟丟失；`onMessage` 全面 `async/await` 正確 `return true`
+- `manifest.json:4` 版本 `2026.0.27` → `2026.0.28`
+
+---
+
 ## [2026.0.27] - 2026-09-01
 
 ### 🎨 優化 & 🐞 修正

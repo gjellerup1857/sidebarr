@@ -78,11 +78,10 @@
     fix();
     try {
       const obs = new MutationObserver(schedule);
-      obs.observe(document.documentElement, { childList: true, subtree: true });
+      obs.observe(document.body, { childList: true, subtree: false });
       window.addEventListener('resize', schedule);
     } catch (e) {}
-    setTimeout(fix, 1000);
-    setTimeout(fix, 2500);
+    setTimeout(fix, 2000);
   };
 
   if (document.readyState === 'loading') {

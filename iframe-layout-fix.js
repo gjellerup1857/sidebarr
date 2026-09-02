@@ -92,16 +92,12 @@
     if (!isInsideSidePanel()) return;
     injectFix();
     fixOverflowElements();
-    // 監聽動態新增的對話內容
     try {
       const obs = new MutationObserver(scheduleFix);
-      obs.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+      obs.observe(document.body, { childList: true, subtree: false });
       window.addEventListener('resize', scheduleFix);
     } catch (e) {}
-    // Gemini 會動態載入，延遲再修復幾次
-    setTimeout(fixOverflowElements, 800);
     setTimeout(fixOverflowElements, 2000);
-    setTimeout(fixOverflowElements, 4000);
   };
 
   if (document.readyState === 'loading') {

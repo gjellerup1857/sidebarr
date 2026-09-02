@@ -31,20 +31,17 @@
     });
   };
 
-  // 高頻檢查（廣告切換快）
+  // 低頻檢查以降低 Brave 卡頓
   const start = () => {
-    // 立即執行一次
     skipAd();
-    // MutationObserver 監看播放器變化
     try {
+      const player = document.querySelector('#movie_player') || document.querySelector('.html5-video-player');
+      const target = player || document.documentElement;
       const obs = new MutationObserver(schedule);
-      obs.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
+      obs.observe(target, { attributes: true, attributeFilter: ['class'] });
     } catch (e) {}
-    // 定時輪詢（0.5s）
-    setInterval(skipAd, 500);
-    // 影片事件
+    setInterval(skipAd, 2000);
     try {
-      document.addEventListener('timeupdate', schedule, true);
       window.addEventListener('yt-navigate-finish', schedule);
     } catch (e) {}
   };
