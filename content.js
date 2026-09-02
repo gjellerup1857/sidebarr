@@ -216,9 +216,7 @@
       document.documentElement.classList.add('sbx-fullscreen-active');
       document.documentElement.classList.remove('sbx-reserve');
       applyBodyRailCompensation(false);
-      // 全螢幕時斷開觀察器，避免無謂計算
       disconnectFixedObserver();
-      adjustFixedElements();
       return;
     }
     document.documentElement.classList.remove('sbx-fullscreen-active');
@@ -229,18 +227,18 @@
       document.documentElement.classList.remove('sbx-reserve');
       applyBodyRailCompensation(false);
       disconnectFixedObserver();
-      adjustFixedElements();
     } else {
       root.classList.add('sbx-enter');
       root.classList.remove('sbx-hidden');
       document.documentElement.classList.add('sbx-reserve');
       applyBodyRailCompensation(true);
-      setupFixedObserver();
-      // 延遲到空閒時再處理固定元素，避免阻塞收回/展開動畫
-      if ('requestIdleCallback' in window) {
-        requestIdleCallback(() => adjustFixedElements(), { timeout: 800 });
-      } else {
-        setTimeout(() => adjustFixedElements(), 100);
+      // v2026.0.31 極致精簡：僅在有固定頭且空閒時一次性修正，不常駐觀察
+      if (hasFixedHeaderNeedingFix()) {
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(() => adjustFixedElements(), { timeout: 1000 });
+        } else {
+          setTimeout(() => adjustFixedElements(), 300);
+        }
       }
     }
   }
@@ -401,28 +399,8 @@
   }
 
   function setupFixedObserver() {
-    if (fixedObserver) return;
-    // 僅在 Rail 顯示（panelOpen=false）且頁面確實有需要修正的 fixed 頭時才啟動，否則完全卸載以達 v2026.0.15 的順暢度
-    if (panelOpen || isFullscreenHidden || document.visibilityState !== 'visible') return;
-    if (!hasFixedHeaderNeedingFix()) return;
-    try {
-      let throttleTimer = null;
-      const throttledSchedule = () => {
-        if (panelOpen || isFullscreenHidden || document.visibilityState !== 'visible') return;
-        if (throttleTimer) return;
-        throttleTimer = setTimeout(() => {
-          throttleTimer = null;
-          if ('requestIdleCallback' in window) {
-            requestIdleCallback(() => scheduleAdjustFixed(), { timeout: 1500 });
-          } else {
-            scheduleAdjustFixed();
-          }
-        }, 1000);
-      };
-      fixedObserver = new MutationObserver(throttledSchedule);
-      if (document.body) fixedObserver.observe(document.body, { childList: true });
-      window.addEventListener('resize', throttledSchedule);
-    } catch (e) {}
+    // v2026.0.31 回退至 v2026.0.15 零開銷：完全不啟動常駐觀察器，僅在 show() 時一次性空閒修正
+    return;
   }
 
   function disconnectFixedObserver() {

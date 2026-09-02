@@ -4,6 +4,20 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 `2026.0.x`。
 
+## [2026.0.31] - 2026-09-01
+
+### ⚡ 回退至極致流暢 - 徹底解決未開啟側邊欄時的卡頓（用戶回報）
+
+#### 問題
+- 用戶明確回報：**未開啟側邊欄**時 Brave 仍嚴重卡頓，`v2026.0.30` 雖已加入 `hasFixedHeaderNeedingFix` 預檢，仍於 `Rail 顯示`（側邊欄關閉的常態）時對每個分頁啟動 `MutationObserver`
+
+#### 修復
+- `content.js:212,403` `show()` / `setupFixedObserver()` 徹底回退至 `v2026.0.15` 零開銷：預設 `setupFixedObserver()` 直接 `return`，`show()` 僅在 `panelOpen=false` 且 `hasFixedHeaderNeedingFix()` 為真時才 `requestIdleCallback` 一次性 `adjustFixedElements`，`panelOpen/isFullscreenHidden` 時立即 `disconnectFixedObserver()`，完全卸載常駐觀察
+- `youtube-adblock.js:9` 已於 `v2026.0.30` 加入 `if (!isSidePanel) return` 守衛，本版保持，確保一般 YouTube 分頁零開銷
+- `manifest.json:4` 版本 `2026.0.30` → `2026.0.31`
+
+---
+
 ## [2026.0.30] - 2026-09-01
 
 ### ⚡ 極致效能 - 徹底解決未開啟側邊欄時的 Brave 卡頓
