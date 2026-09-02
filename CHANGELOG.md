@@ -4,6 +4,22 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 `2026.0.x`。
 
+## [2026.0.27] - 2026-09-01
+
+### 🎨 優化 & 🐞 修正
+
+#### 1. 收回/展開動畫仍不順暢
+- **修復**：`content.css:1` 徹底移除 `transition`（`transition:none`）使 Rail 與 `margin-right` 瞬時完成，`background.js:167` 僅處理 `activeTab` 並 `200ms` 節流 `MutationObserver`（原 `subtree:true` 改 `body childList`），消除面板跑動
+
+#### 2. YouTube 影片頁與 Gemini 筆記本 UI（統一 RWD 2.0）
+- **問題**：`v2026.0.26` 雖修復動畫，但 YouTube 除影片外元素仍溢出，Gemini 筆記本「職涯顧問」如圖仍扭曲
+- **修復**：
+  - 新增 `unified-sidepanel-fix.js/css` 對 `youtube.com` 與 `gemini` 等所有側邊欄窄 `iframe`（`<700px`）統一僅處理 `pre/code` 的 `pre-wrap` 與 `table` 橫向捲動，不再強制 `div/main/c-wiz` 的 `width/flex-direction`
+  - `iframe-layout-fix` 限縮至 `chatgpt/claude/perplexity`，`youtube` 側邊欄僅保留 `adblock` 的 `skipBtn` 點擊
+  - `manifest.json:4` 版本 `2026.0.26` → `2026.0.27`
+
+---
+
 ## [2026.0.26] - 2026-09-01
 
 ### 🎨 優化 & 🐞 修正
