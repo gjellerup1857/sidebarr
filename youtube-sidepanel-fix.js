@@ -44,13 +44,23 @@
   };
 
   const init = () => {
+    if (document.visibilityState !== 'visible') return;
     fix();
     try {
-      const obs = new MutationObserver(schedule);
+      const obs = new MutationObserver(() => {
+        if (document.visibilityState === 'visible') schedule();
+      });
       obs.observe(document.body, { childList: true, subtree: false });
       window.addEventListener('resize', schedule);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') schedule();
+      });
     } catch (e) {}
-    setTimeout(fix, 2000);
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => fix(), { timeout: 1500 });
+    } else {
+      setTimeout(fix, 2000);
+    }
   };
 
   if (document.readyState === 'loading') {

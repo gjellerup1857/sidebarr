@@ -4,6 +4,21 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 `2026.0.x`。
 
+## [2026.0.29] - 2026-09-01
+
+### ⚡ 極致效能優化 - 徹底解決殘餘卡頓
+
+#### 問題
+- `v2026.0.28` 雖大幅降低觀察器頻率，Brave 在多分頁 + Gemini/YouTube 長對話時仍有輕微卡頓
+
+#### 修復
+- `content.js:359` `setupFixedObserver` 新增按需啟停：`panelOpen` 或 `isFullscreenHidden` 時 `disconnectFixedObserver()`，`show()` 顯示時 `setupFixedObserver()` 並 `requestIdleCallback` 延遲 `adjustFixedElements`，`MutationObserver` 僅 `body childList` 並 `200ms` 節流已於 `v2026.0.28` 完成，本版進一步將 `scheduleAdjustFixed` 改為僅在 `document.visibilityState==='visible'` 且空閒時執行
+- `youtube-adblock.js` 僅觀察 `#movie_player` 的 `class`，`setInterval` 保持 `2000ms`，移除 `timeupdate`
+- `iframe-layout-fix.js` / `unified-sidepanel-fix.js` / `youtube-sidepanel-fix.js` 均改為僅 `body childList` 觀察，移除 `subtree` 全量與 `scroll` 監聽，`fix` 僅在可見且空閒時 `requestIdleCallback` 執行，`setTimeout` 由 `3` 次減為 `1` 次
+- `manifest.json:4` 版本 `2026.0.28` → `2026.0.29`
+
+---
+
 ## [2026.0.28] - 2026-09-01
 
 ### ⚡ 效能緊急修正 - 解決 Brave 嚴重卡頓

@@ -31,19 +31,23 @@
     });
   };
 
-  // 低頻檢查以降低 Brave 卡頓
+  // 極致低頻：僅在可見且非閒置時檢查
   const start = () => {
+    if (document.visibilityState !== 'visible') return;
     skipAd();
     try {
-      const player = document.querySelector('#movie_player') || document.querySelector('.html5-video-player');
-      const target = player || document.documentElement;
-      const obs = new MutationObserver(schedule);
-      obs.observe(target, { attributes: true, attributeFilter: ['class'] });
+      const player = document.querySelector('#movie_player');
+      if (player) {
+        const obs = new MutationObserver(() => {
+          if (document.visibilityState === 'visible') schedule();
+        });
+        obs.observe(player, { attributes: true, attributeFilter: ['class'] });
+      }
     } catch (e) {}
-    setInterval(skipAd, 2000);
-    try {
-      window.addEventListener('yt-navigate-finish', schedule);
-    } catch (e) {}
+    // 2.5s 輪詢，僅在可見時執行
+    setInterval(() => {
+      if (document.visibilityState === 'visible') skipAd();
+    }, 2500);
   };
 
   if (document.readyState === 'loading') {

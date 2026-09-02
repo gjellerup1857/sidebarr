@@ -89,15 +89,24 @@
   };
 
   const init = () => {
-    if (!isInsideSidePanel()) return;
+    if (!isInsideSidePanel() || document.visibilityState !== 'visible') return;
     injectFix();
-    fixOverflowElements();
+    // 延遲到空閒時再執行，避免阻塞首屏
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => fixOverflowElements(), { timeout: 1500 });
+    } else {
+      setTimeout(fixOverflowElements, 1500);
+    }
     try {
-      const obs = new MutationObserver(scheduleFix);
+      const obs = new MutationObserver(() => {
+        if (document.visibilityState === 'visible') scheduleFix();
+      });
       obs.observe(document.body, { childList: true, subtree: false });
       window.addEventListener('resize', scheduleFix);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') scheduleFix();
+      });
     } catch (e) {}
-    setTimeout(fixOverflowElements, 2000);
   };
 
   if (document.readyState === 'loading') {

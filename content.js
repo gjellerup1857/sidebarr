@@ -216,6 +216,8 @@
       document.documentElement.classList.add('sbx-fullscreen-active');
       document.documentElement.classList.remove('sbx-reserve');
       applyBodyRailCompensation(false);
+      // 全螢幕時斷開觀察器，避免無謂計算
+      disconnectFixedObserver();
       adjustFixedElements();
       return;
     }
@@ -226,14 +228,20 @@
       root.classList.add('sbx-hidden');
       document.documentElement.classList.remove('sbx-reserve');
       applyBodyRailCompensation(false);
+      disconnectFixedObserver();
       adjustFixedElements();
     } else {
       root.classList.add('sbx-enter');
       root.classList.remove('sbx-hidden');
       document.documentElement.classList.add('sbx-reserve');
       applyBodyRailCompensation(true);
-      // 同步處理固定元素，避免收回時先出現空白再跳動
-      adjustFixedElements();
+      setupFixedObserver();
+      // 延遲到空閒時再處理固定元素，避免阻塞收回/展開動畫
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => adjustFixedElements(), { timeout: 800 });
+      } else {
+        setTimeout(() => adjustFixedElements(), 100);
+      }
     }
   }
 
@@ -381,20 +389,35 @@
   function setupFixedObserver() {
     if (fixedObserver) return;
     try {
-      // 極致優化：僅在 Rail 顯示時處理，且大幅降低頻率，恢復至 v2026.0.15 前的順暢度
       let throttleTimer = null;
       const throttledSchedule = () => {
-        if (panelOpen || isFullscreenHidden) return;
+        if (panelOpen || isFullscreenHidden || document.visibilityState !== 'visible') return;
         if (throttleTimer) return;
         throttleTimer = setTimeout(() => {
           throttleTimer = null;
-          scheduleAdjustFixed();
-        }, 500);
+          // 僅在空閒時執行，避免阻塞主線程
+          if ('requestIdleCallback' in window) {
+            requestIdleCallback(() => scheduleAdjustFixed(), { timeout: 1000 });
+          } else {
+            scheduleAdjustFixed();
+          }
+        }, 800);
       };
       fixedObserver = new MutationObserver(throttledSchedule);
-      // 僅觀察 body 的直接子節點新增/移除，不觀察 subtree 與屬性，避免大量觸發
       if (document.body) fixedObserver.observe(document.body, { childList: true });
       window.addEventListener('resize', throttledSchedule);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && !panelOpen) scheduleAdjustFixed();
+      });
+    } catch (e) {}
+  }
+
+  function disconnectFixedObserver() {
+    try {
+      if (fixedObserver) {
+        fixedObserver.disconnect();
+        fixedObserver = null;
+      }
     } catch (e) {}
   }
 
