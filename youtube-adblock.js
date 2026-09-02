@@ -5,10 +5,11 @@
   const host = location.hostname || '';
   if (!host.includes('youtube.com') && !host.includes('youtube-nocookie.com')) return;
 
-  // 僅在側邊欄窄 iframe 或一般頁面皆生效（Brave 側邊欄不走 Shields）
   const isSidePanel = (() => {
     try { return window.self !== window.top; } catch (e) { return false; }
   })();
+  // 僅在側邊欄 iframe 內生效，一般分頁交給 Brave Shields，避免無側邊欄時仍卡頓
+  if (!isSidePanel) return;
 
   const skipAd = () => {
     try {

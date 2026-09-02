@@ -386,8 +386,25 @@
     });
   }
 
+  function hasFixedHeaderNeedingFix() {
+    try {
+      const candidates = document.querySelectorAll('header, nav, div[style*="fixed"], div[style*="sticky"]');
+      for (const el of candidates) {
+        if (el.id === 'sbx-rail-root' || (el.closest && el.closest('#sbx-rail-root'))) continue;
+        const s = getComputedStyle(el);
+        if (s.position !== 'fixed' && s.position !== 'sticky') continue;
+        const r = el.getBoundingClientRect();
+        if (r.width > window.innerWidth * 0.5 && Math.abs(r.right - window.innerWidth) < 5) return true;
+      }
+      return false;
+    } catch (e) { return false; }
+  }
+
   function setupFixedObserver() {
     if (fixedObserver) return;
+    // 僅在 Rail 顯示（panelOpen=false）且頁面確實有需要修正的 fixed 頭時才啟動，否則完全卸載以達 v2026.0.15 的順暢度
+    if (panelOpen || isFullscreenHidden || document.visibilityState !== 'visible') return;
+    if (!hasFixedHeaderNeedingFix()) return;
     try {
       let throttleTimer = null;
       const throttledSchedule = () => {
@@ -395,20 +412,25 @@
         if (throttleTimer) return;
         throttleTimer = setTimeout(() => {
           throttleTimer = null;
-          // 僅在空閒時執行，避免阻塞主線程
           if ('requestIdleCallback' in window) {
-            requestIdleCallback(() => scheduleAdjustFixed(), { timeout: 1000 });
+            requestIdleCallback(() => scheduleAdjustFixed(), { timeout: 1500 });
           } else {
             scheduleAdjustFixed();
           }
-        }, 800);
+        }, 1000);
       };
       fixedObserver = new MutationObserver(throttledSchedule);
       if (document.body) fixedObserver.observe(document.body, { childList: true });
       window.addEventListener('resize', throttledSchedule);
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible' && !panelOpen) scheduleAdjustFixed();
-      });
+    } catch (e) {}
+  }
+
+  function disconnectFixedObserver() {
+    try {
+      if (fixedObserver) {
+        fixedObserver.disconnect();
+        fixedObserver = null;
+      }
     } catch (e) {}
   }
 
