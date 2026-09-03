@@ -150,6 +150,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse(await handleFullscreenExit(sender));
       } else if (message.type === 'sbx-copy-text') {
         sendResponse(await handleCopyText(message.text, sender));
+      } else if (message.type === 'openGoogleOAuth') {
+        try {
+          await chrome.tabs.create({ url: message.url });
+          sendResponse({ ok: true });
+        } catch (e) { sendResponse({ ok: false, error: e.message }); }
       }
     } catch (e) {
       try { sendResponse({ ok: false, error: e.message }); } catch (_) {}

@@ -4,6 +4,18 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 `2026.0.x`。
 
+## [2026.0.33] - 2026-09-01
+
+### 🐞 修正
+
+#### DeepSeek 側邊欄 Google 登入仍 404
+- **問題**：`v2026.0.32` 雖新增 `webNavigation` 攔截與 `allow="popups"`，但用戶點擊側邊欄內 DeepSeek 的「Google 登入」按鈕（`href` 為 `#` 由 JS 觸發 `window.open`）時，未被 `onBeforeNavigate` 捕獲，仍在 `iframe` 內導向 `accounts.google.com` 而 `X-Frame` 阻擋顯示 404
+- **修復**：
+  - 新增 `deepseek-oauth-fix.js`（`matches: chat.deepseek.com` `all_frames:true` `document_start`）：攔截 `a/button` 點擊與 `window.open` / `location.assign` 中對 `accounts.google.com` 的導向，改以 `chrome.runtime.sendMessage({type:'openGoogleOAuth',url})` 在新分頁開啟，`background.js` 新增對應 `tabs.create` 處理
+  - `manifest.json:4` 版本 `2026.0.32` → `2026.0.33`
+
+---
+
 ## [2026.0.32] - 2026-09-01
 
 ### 🐞 修正
