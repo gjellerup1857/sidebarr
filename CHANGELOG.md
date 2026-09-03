@@ -4,6 +4,17 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 `2026.0.x`。
 
+## [2026.0.35] - 2026-09-03
+
+### 🐞 修正
+
+#### 側邊欄開啟 YouTube 顯示「拒絕連線」
+- **根因**：`rules.json` 缺少 `youtube.com`／`youtube-nocookie.com` 的 `declarativeNetRequest` 規則，YouTube 回應的 `X-Frame-Options: DENY` 與 `Content-Security-Policy: frame-ancestors 'self'` 未移除，側邊欄 `iframe`（`chrome-extension://` 內嵌）被瀏覽器以「拒絕連線」畫面阻擋
+- **修復**：`rules.json:12,13` 新增 `||youtube.com` 與 `||youtube-nocookie.com` 的 `modifyHeaders` 規則（移除 `x-frame-options`／`content-security-policy` 等 9 項 header），與其他站點一致
+- `manifest.json:4` 版本 `2026.0.34` → `2026.0.35`
+
+---
+
 ## [2026.0.34] - 2026-09-03
 
 ### 🔧 全面檢視與修復 - 根因導向，解決五大問題
