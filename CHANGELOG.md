@@ -4,6 +4,24 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 `2026.0.x`。
 
+## [2026.0.34] - 2026-09-03
+
+### 🔧 全面檢視與修復 - 根因導向，解決五大問題
+
+#### 缺陷檢視（根因）
+1. **卡頓**：`unified-sidepanel-fix.js`／`clipboard-patch.js` 以 `<all_urls>` + `all_frames:true` 注入，在**每個分頁每個 iframe** 建立 `MutationObserver`／`ResizeObserver`；`content.js` 的 `adjustFixedElements` 對 `header/nav/div[style*]` 做 `getComputedStyle` 掃描並在 `init()` 啟動 `scheduleAdjustFixed`（`requestAnimationFrame` 迴圈）；`setupFullscreenHandling` 於所有頁面無條件掛 `resize` 監聽
+2. **遮擋內容**：`content.css` 的 `body{max-width:calc(100vw-44px)}` 與 `body[style*="100vw"]、[style*="100vw"]{width:calc(100vw-44px)}` 過度覆寫合法 `100vw`／`fixed` 元素；`adjustFixedElements` 掃描不完整
+3/4/5. **YouTube/Gemini/Google 爆版**：`unified-sidepanel-fix`／`iframe-layout-fix` 對 `#columns`／`c-wiz` 強制 `flex-direction:column`／`width:100%`，與站點自身 RWD 衝突
+- 另一缺陷：`content.js` 有**重複的 `disconnectFixedObserver` 宣告**
+
+#### 修復
+- `manifest.json`：移除 `unified-sidepanel-fix`（`<all_urls>` all_frames）；`clipboard-patch` 由 `<all_urls>` 限縮為 Gemini/ChatGPT/Claude/Perplexity/DeepSeek/Grok 等 AI 站點
+- `content.js`：刪除 `adjustFixedElements`／`shouldAdjustFixed`／`shouldAdjustVw`／`hasFixedHeaderNeedingFix`／`scheduleAdjustFixed`／重複 `disconnectFixedObserver`，改為一個極輕量、一次性、空閒時執行的 `fixFullWidthFixedHeaders()`（僅對 `header/nav` 貼右全寬 `fixed/sticky` 設 `right:44px`，無常駐觀察器）；移除 `applyBodyRailCompensation`（改由 CSS `html.sbx-reserve body` 處理）；`setupFullscreenHandling` 僅在 YouTube 掛 `MutationObserver`，`init()` 不再啟動掃描迴圈
+- `content.css`：移除 `max-width` 與 `[style*="100vw"]` 覆寫，僅保留 `margin-right:44px` + `box-sizing:border-box`
+- 結果：未開啟側邊欄時零觀察器零掃描（恢復流暢），內容不再被錯誤覆寫，YouTube/Gemini/Google 依其原生 RWD 正常顯示
+
+---
+
 ## [2026.0.33] - 2026-09-01
 
 ### 🐞 修正

@@ -155,68 +155,12 @@
   const shortcutErr = settingsEl.querySelector('#sbx-shortcut-err');
   const shortcutLink = settingsEl.querySelector('#sbx-shortcut-link');
 
-  let originalBodyMarginRight = null;
-  let originalBodyMaxWidth = null;
-  let originalHtmlOverflowX = null;
-
-  function applyBodyRailCompensation(enable) {
-    try {
-      if (enable) {
-        if (originalBodyMarginRight === null) {
-          originalBodyMarginRight = document.body ? document.body.style.getPropertyValue('margin-right') : '';
-        }
-        if (originalBodyMaxWidth === null) {
-          originalBodyMaxWidth = document.body ? document.body.style.getPropertyValue('max-width') : '';
-        }
-        if (originalHtmlOverflowX === null && document.documentElement) {
-          originalHtmlOverflowX = document.documentElement.style.getPropertyValue('overflow-x');
-        }
-        if (document.body) {
-          document.body.style.setProperty('margin-right', '44px', 'important');
-          document.body.style.setProperty('max-width', 'calc(100vw - 44px)', 'important');
-          document.body.style.setProperty('box-sizing', 'border-box', 'important');
-        }
-        if (document.documentElement) {
-          document.documentElement.style.setProperty('overflow-x', 'clip', 'important');
-        }
-      } else {
-        if (document.body) {
-          if (originalBodyMarginRight !== null) {
-            if (originalBodyMarginRight) document.body.style.setProperty('margin-right', originalBodyMarginRight);
-            else document.body.style.removeProperty('margin-right');
-          } else {
-            document.body.style.removeProperty('margin-right');
-          }
-          if (originalBodyMaxWidth !== null) {
-            if (originalBodyMaxWidth) document.body.style.setProperty('max-width', originalBodyMaxWidth);
-            else document.body.style.removeProperty('max-width');
-          } else {
-            document.body.style.removeProperty('max-width');
-          }
-          document.body.style.removeProperty('box-sizing');
-        }
-        if (document.documentElement && originalHtmlOverflowX !== null) {
-          if (originalHtmlOverflowX) document.documentElement.style.setProperty('overflow-x', originalHtmlOverflowX);
-          else document.documentElement.style.removeProperty('overflow-x');
-        }
-        // reset stored values after restore to allow re-apply
-        if (!enable) {
-          originalBodyMarginRight = null;
-          originalBodyMaxWidth = null;
-          originalHtmlOverflowX = null;
-        }
-      }
-    } catch (e) {}
-  }
-
   function show() {
     if (isFullscreenHidden) {
       root.classList.add('sbx-fullscreen-hidden');
       root.classList.add('sbx-hidden');
       document.documentElement.classList.add('sbx-fullscreen-active');
       document.documentElement.classList.remove('sbx-reserve');
-      applyBodyRailCompensation(false);
-      disconnectFixedObserver();
       return;
     }
     document.documentElement.classList.remove('sbx-fullscreen-active');
@@ -225,198 +169,46 @@
       root.classList.remove('sbx-enter');
       root.classList.add('sbx-hidden');
       document.documentElement.classList.remove('sbx-reserve');
-      applyBodyRailCompensation(false);
-      disconnectFixedObserver();
     } else {
       root.classList.add('sbx-enter');
       root.classList.remove('sbx-hidden');
       document.documentElement.classList.add('sbx-reserve');
-      applyBodyRailCompensation(true);
-      // v2026.0.31 極致精簡：僅在有固定頭且空閒時一次性修正，不常駐觀察
-      if (hasFixedHeaderNeedingFix()) {
-        if ('requestIdleCallback' in window) {
-          requestIdleCallback(() => adjustFixedElements(), { timeout: 1000 });
-        } else {
-          setTimeout(() => adjustFixedElements(), 300);
-        }
+      // 一次性修正固定全寬頭部（空閒時），無常駐觀察器
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(() => fixFullWidthFixedHeaders(), { timeout: 1200 });
+      } else {
+        setTimeout(() => fixFullWidthFixedHeaders(), 300);
       }
     }
   }
 
-  // --- 修正部分網頁被面板遮擋（fixed / sticky / 100vw 全寬元素）---
-  const fixedElements = new Map();
-  const vwElements = new Map();
-  let fixedObserver = null;
-  let fixedRaf = null;
+  // --- 修正 fixed/sticky 全寬頂部導航避免被面板遮擋（極輕量、一次性、無常駐觀察器）---
+  const fixedAdjusted = new Map();
 
-  function isFixedOrSticky(el) {
-    try {
-      const pos = getComputedStyle(el).position;
-      return pos === 'fixed' || pos === 'sticky';
-    } catch (e) { return false; }
-  }
-
-  function shouldAdjustFixed(el) {
-    if (el.id === 'sbx-rail-root' || (el.closest && el.closest('#sbx-rail-root'))) return false;
-    try {
-      const style = getComputedStyle(el);
-      const rect = el.getBoundingClientRect();
-      const vw = window.innerWidth;
-      if (rect.height > window.innerHeight * 0.45) return false;
-      if (rect.width < vw * 0.5) return false;
-      const touchesRight = Math.abs(rect.right - vw) < 3;
-      const isFullWidth = (style.left === '0px' && style.right === '0px') || style.width === '100vw' || Math.abs(rect.width - vw) < 3;
-      return touchesRight && isFullWidth;
-    } catch (e) { return false; }
-  }
-
-  function shouldAdjustVw(el) {
-    if (el.id === 'sbx-rail-root' || (el.closest && el.closest('#sbx-rail-root'))) return false;
-    try {
-      const rect = el.getBoundingClientRect();
-      const style = getComputedStyle(el);
-      const isVwStyle = style.width === '100vw' || el.style.width.includes('100vw') || (el.getAttribute('style') || '').includes('100vw');
-      const isVwComputed = Math.abs(rect.width - window.innerWidth) < 2 && Math.abs(rect.right - window.innerWidth) < 3;
-      // 同時處理 inline 100vw 與樣式表 100vw（後者以 rect 判斷）
-      const hasVw = isVwStyle || isVwComputed;
-      if (!hasVw) return false;
-      return Math.abs(rect.right - window.innerWidth) < 3 && rect.width >= window.innerWidth * 0.85;
-    } catch (e) { return false; }
-  }
-
-  // 依 Skill 建議：批次處理大量 DOM，避免阻塞主線程
-  async function adjustFixedElements() {
+  function fixFullWidthFixedHeaders() {
     if (panelOpen || isFullscreenHidden) {
-      // 還原批次
-      const toRestoreFixed = Array.from(fixedElements.entries());
-      const toRestoreVw = Array.from(vwElements.entries());
-      const BATCH = 20;
-      for (let i = 0; i < toRestoreFixed.length; i += BATCH) {
-        await new Promise(r => requestAnimationFrame(() => {
-          toRestoreFixed.slice(i, i + BATCH).forEach(([el, original]) => {
-            try {
-              if (original.right !== null) el.style.setProperty('right', original.right);
-              else el.style.removeProperty('right');
-              if (original.width !== null) el.style.setProperty('width', original.width);
-              else el.style.removeProperty('width');
-              if (original.maxWidth !== null) el.style.setProperty('max-width', original.maxWidth);
-              else el.style.removeProperty('max-width');
-            } catch (e) {}
-          });
-          r();
-        }));
-        if (globalThis.scheduler?.yield) await scheduler.yield();
-      }
-      fixedElements.clear();
-      for (let i = 0; i < toRestoreVw.length; i += BATCH) {
-        await new Promise(r => requestAnimationFrame(() => {
-          toRestoreVw.slice(i, i + BATCH).forEach(([el, original]) => {
-            try {
-              if (original.width !== null) el.style.setProperty('width', original.width);
-              else el.style.removeProperty('width');
-              if (original.maxWidth !== null) el.style.setProperty('max-width', original.maxWidth);
-              else el.style.removeProperty('max-width');
-            } catch (e) {}
-          });
-          r();
-        }));
-        if (globalThis.scheduler?.yield) await scheduler.yield();
-      }
-      vwElements.clear();
+      fixedAdjusted.forEach((original, el) => {
+        try {
+          if (original) el.style.setProperty('right', original);
+          else el.style.removeProperty('right');
+        } catch (e) {}
+      });
+      fixedAdjusted.clear();
       return;
     }
     try {
-      // 極致優化：僅掃描可能溢出的特定選擇器，而非全部 body *
-      const selector = 'header, nav, div[style*="fixed"], div[style*="sticky"], div[style*="100vw"], body, html';
-      const candidates = document.querySelectorAll(selector);
-      const all = [];
-      if (document.body) all.push(document.body);
-      if (document.documentElement) all.push(document.documentElement);
-      all.push(...candidates);
-      // 去重
-      const uniq = Array.from(new Set(all));
-      const BATCH = 20;
-      for (let i = 0; i < uniq.length; i += BATCH) {
-        const batch = uniq.slice(i, i + BATCH);
-        await new Promise(r => requestAnimationFrame(() => {
-          for (const el of batch) {
-            if (!el || el.id === 'sbx-rail-root' || (el.closest && el.closest('#sbx-rail-root'))) continue;
-            if (!fixedElements.has(el) && isFixedOrSticky(el) && shouldAdjustFixed(el)) {
-              const inlineRight = el.style.getPropertyValue('right');
-              const inlineWidth = el.style.getPropertyValue('width');
-              const inlineMaxWidth = el.style.getPropertyValue('max-width');
-              fixedElements.set(el, {
-                right: inlineRight ? inlineRight : null,
-                width: inlineWidth ? inlineWidth : null,
-                maxWidth: inlineMaxWidth ? inlineMaxWidth : null
-              });
-              try {
-                el.style.setProperty('right', '44px', 'important');
-                el.style.setProperty('max-width', 'calc(100vw - 44px)', 'important');
-              } catch (e) {}
-              continue;
-            }
-            if (!vwElements.has(el) && !fixedElements.has(el) && shouldAdjustVw(el)) {
-              const inlineWidth = el.style.getPropertyValue('width');
-              const inlineMaxWidth = el.style.getPropertyValue('max-width');
-              vwElements.set(el, {
-                width: inlineWidth ? inlineWidth : null,
-                maxWidth: inlineMaxWidth ? inlineMaxWidth : null
-              });
-              try {
-                el.style.setProperty('width', 'calc(100vw - 44px)', 'important');
-                el.style.setProperty('max-width', 'calc(100vw - 44px)', 'important');
-              } catch (e) {}
-            }
-          }
-          r();
-        }));
-        if (globalThis.scheduler?.yield) await scheduler.yield();
-      }
-    } catch (e) {}
-  }
-
-  function scheduleAdjustFixed() {
-    if (fixedRaf) cancelAnimationFrame(fixedRaf);
-    fixedRaf = requestAnimationFrame(() => {
-      fixedRaf = null;
-      adjustFixedElements().catch(() => {});
-    });
-  }
-
-  function hasFixedHeaderNeedingFix() {
-    try {
-      const candidates = document.querySelectorAll('header, nav, div[style*="fixed"], div[style*="sticky"]');
-      for (const el of candidates) {
+      const headers = document.querySelectorAll('header, nav');
+      for (const el of headers) {
         if (el.id === 'sbx-rail-root' || (el.closest && el.closest('#sbx-rail-root'))) continue;
+        if (fixedAdjusted.has(el)) continue;
         const s = getComputedStyle(el);
         if (s.position !== 'fixed' && s.position !== 'sticky') continue;
         const r = el.getBoundingClientRect();
-        if (r.width > window.innerWidth * 0.5 && Math.abs(r.right - window.innerWidth) < 5) return true;
-      }
-      return false;
-    } catch (e) { return false; }
-  }
-
-  function setupFixedObserver() {
-    // v2026.0.31 回退至 v2026.0.15 零開銷：完全不啟動常駐觀察器，僅在 show() 時一次性空閒修正
-    return;
-  }
-
-  function disconnectFixedObserver() {
-    try {
-      if (fixedObserver) {
-        fixedObserver.disconnect();
-        fixedObserver = null;
-      }
-    } catch (e) {}
-  }
-
-  function disconnectFixedObserver() {
-    try {
-      if (fixedObserver) {
-        fixedObserver.disconnect();
-        fixedObserver = null;
+        if (r.width < window.innerWidth * 0.5) continue;
+        if (Math.abs(r.right - window.innerWidth) > 5) continue;
+        const original = el.style.getPropertyValue('right');
+        fixedAdjusted.set(el, original || '');
+        el.style.setProperty('right', '44px', 'important');
       }
     } catch (e) {}
   }
@@ -476,13 +268,10 @@
   }
 
   (function setupFullscreenHandling() {
+    // 僅在有全螢幕意義的頁面才監聽，避免每個分頁都掛 resize 監聽造成的背景卡頓
     document.addEventListener('fullscreenchange', checkFullscreenState);
     document.addEventListener('webkitfullscreenchange', checkFullscreenState);
     document.addEventListener('mozfullscreenchange', checkFullscreenState);
-    document.addEventListener('fullscreenerror', checkFullscreenState);
-    window.addEventListener('resize', () => {
-      setTimeout(checkFullscreenState, 100);
-    });
     if (isYouTubeHost()) {
       try {
         const mo = new MutationObserver(checkFullscreenState);
@@ -490,7 +279,6 @@
         if (document.body) mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
       } catch (e) {}
     }
-    setTimeout(checkFullscreenState, 800);
   })();
 
   async function renderRail() {
@@ -919,9 +707,6 @@
     applyTheme();
     initShortcut();
     show();
-    setupFixedObserver();
-    setTimeout(checkFullscreenState, 300);
-    setTimeout(scheduleAdjustFixed, 600);
   }
 
   init();
