@@ -4,6 +4,28 @@
 
 格式基於 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.0.0/)，版本號遵循 `2026.0.x`。
 
+## [2026.0.32] - 2026-09-01
+
+### 🐞 修正
+
+#### 1. DeepSeek 側邊欄需重複登入 & Google 登入 404
+- **問題**：
+  - 每次關閉瀏覽器後重開，從側邊欄開啟 DeepSeek 需重新登入
+  - 在側邊欄 iframe 內點「使用 Google 帳號登入」跳至 `accounts.google.com` 時顯示 404
+- **根因**：
+  - `accounts.google.com` 的 `X-Frame-Options: DENY` 與 `Permissions-Policy` 在 iframe 內被阻擋，且未設 `allow="popups"`，導致 OAuth 無法以彈窗完成
+  - DeepSeek 登入後的 URL 變更（`code=`）未同步回 `chrome.storage.local` 的 `sites[].url`，重啟後仍載入舊 `https://chat.deepseek.com` 而非帶授權的 URL，Brave 若開啟「結束時清除 Cookie」亦會清除 `chat.deepseek.com` 的 `session` cookie
+- **修復**：
+  - `manifest.json:6,15` 新增 `cookies` / `webNavigation` 權限與 `host_permissions` `*://*.google.com/*` / `*://accounts.google.com/*` / `*://*.deepseek.com/*`，`sidepanel.html:12` `iframe allow` 新增 `popups; popups-to-escape-sandbox; top-navigation-by-user-activation`
+  - `rules.json:10` 新增 `accounts.google.com` 與 `deepseek.com` 的 `modifyHeaders` 規則，移除 `X-Frame` 等 9 項阻擋
+  - `background.js:16` 新增 `webNavigation.onBeforeNavigate` 攔截側邊欄 iframe 內對 `accounts.google.com` 的導航，改以 `chrome.tabs.create({url})` 在新分頁完成 Google 授權，`tabs.onUpdated` 偵測導回 `chat.deepseek.com?code=` 後同步 `activeSiteId` 並自動刷新側邊欄
+  - `sidepanel.js:705` `siteFrame load` 時同步當前 `contentWindow.location.href` 回 `sites[].url` 並 `saveSites()`，確保重啟後載入最新已登入 URL；同時檢測 `404` 的 `accounts.google.com` 並提示
+
+#### 2. 其他
+- `manifest.json:4` 版本 `2026.0.31` → `2026.0.32`
+
+---
+
 ## [2026.0.31] - 2026-09-01
 
 ### ⚡ 回退至極致流暢 - 徹底解決未開啟側邊欄時的卡頓（用戶回報）

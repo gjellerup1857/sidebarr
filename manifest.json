@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Sidebarr 瀏覽器側邊欄工具",
-  "version": "2026.0.31",
+  "version": "2026.0.32",
   "description": "頁面內建常駐面板列，一鍵加入常用網站並在側邊欄開啟，面板列永遠停靠瀏覽器最右側",
   "permissions": [
     "storage",
@@ -10,11 +10,16 @@
     "tabs",
     "scripting",
     "clipboardWrite",
-    "clipboardRead"
+    "clipboardRead",
+    "cookies",
+    "webNavigation"
   ],
   "host_permissions": [
     "<all_urls>",
-    "chrome-extension://*/*"
+    "chrome-extension://*/*",
+    "*://*.google.com/*",
+    "*://accounts.google.com/*",
+    "*://*.deepseek.com/*"
   ],
   "background": {
     "service_worker": "background.js"

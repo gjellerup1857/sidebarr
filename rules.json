@@ -196,5 +196,49 @@
       "urlFilter": "||www.google.com",
       "resourceTypes": ["sub_frame"]
     }
+  },
+  {
+    "id": 10,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "responseHeaders": [
+        { "header": "x-frame-options", "operation": "remove" },
+        { "header": "content-security-policy", "operation": "remove" },
+        { "header": "content-security-policy-report-only", "operation": "remove" },
+        { "header": "permissions-policy", "operation": "remove" },
+        { "header": "permissions-policy-report-only", "operation": "remove" },
+        { "header": "feature-policy", "operation": "remove" },
+        { "header": "cross-origin-embedder-policy", "operation": "remove" },
+        { "header": "cross-origin-opener-policy", "operation": "remove" },
+        { "header": "cross-origin-resource-policy", "operation": "remove" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||accounts.google.com",
+      "resourceTypes": ["sub_frame", "popup"]
+    }
+  },
+  {
+    "id": 11,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "responseHeaders": [
+        { "header": "x-frame-options", "operation": "remove" },
+        { "header": "content-security-policy", "operation": "remove" },
+        { "header": "content-security-policy-report-only", "operation": "remove" },
+        { "header": "permissions-policy", "operation": "remove" },
+        { "header": "permissions-policy-report-only", "operation": "remove" },
+        { "header": "feature-policy", "operation": "remove" },
+        { "header": "cross-origin-embedder-policy", "operation": "remove" },
+        { "header": "cross-origin-opener-policy", "operation": "remove" },
+        { "header": "cross-origin-resource-policy", "operation": "remove" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||deepseek.com",
+      "resourceTypes": ["sub_frame"]
+    }
   }
 ]

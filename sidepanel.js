@@ -267,9 +267,29 @@ function isExtensionUrl(url) {
   return typeof url === 'string' && url.startsWith('chrome-extension://');
 }
 
+function isGoogleOAuthUrl(url) {
+  return typeof url === 'string' && (
+    url.includes('accounts.google.com') ||
+    url.includes('oauth2') && url.includes('google') ||
+    url.includes('signin/v2/challenge') ||
+    url.includes('ServiceLogin')
+  );
+}
+
+// 攔截 Google OAuth 在 iframe 內的跳轉，改由新分頁開啟以避免 404 與 X-Frame 阻擋
+function handleOAuthNavigation(url) {
+  if (isGoogleOAuthUrl(url)) {
+    chrome.tabs.create({ url }).catch(() => {});
+    return true;
+  }
+  return false;
+}
+
 async function loadFrame(siteId) {
   const site = sites.find((s) => s.id === siteId);
   if (!site) return;
+  // 若為 Google OAuth 連結，先以新分頁開啟
+  if (handleOAuthNavigation(site.url)) return;
   activeSiteId = siteId;
   emptyState.classList.add('hidden');
   hideEmbedError();
@@ -704,6 +724,17 @@ function toast(msg) {
 
 siteFrame.addEventListener('load', () => {
   loadingBar.classList.add('hidden');
+  // 同步更新當前站點的 URL（用於 DeepSeek 等 OAuth 後 URL 變更，確保重啟後仍為登入態）
+  try {
+    const href = siteFrame.contentWindow.location.href;
+    if (href && href.startsWith('http') && activeSiteId) {
+      const site = sites.find((s) => s.id === activeSiteId);
+      if (site && site.url !== href && !href.includes('accounts.google.com')) {
+        site.url = href;
+        saveSites();
+      }
+    }
+  } catch (e) {}
   const site = sites.find((s) => s.id === activeSiteId);
   if (site && isExtensionUrl(site.url)) {
     try {
@@ -737,6 +768,14 @@ siteFrame.addEventListener('load', () => {
   } else {
     hideEmbedError();
   }
+  // 檢測 Google OAuth 404：若 iframe 內跳轉至 accounts.google.com 且顯示 404，提示改用新分頁
+  try {
+    const href = siteFrame.contentWindow.location.href;
+    if (href && href.includes('accounts.google.com') && href.includes('404')) {
+      toast('Google 登入請在新分頁完成，已為您開啟');
+      chrome.tabs.create({ url: href }).catch(() => {});
+    }
+  } catch (e) {}
 });
 siteFrame.addEventListener('error', () => {
   loadingBar.classList.add('hidden');

@@ -22,6 +22,47 @@ try {
   });
 } catch (e) {}
 
+// 處理 DeepSeek 等站點的 Google OAuth 在側邊欄 iframe 內的 404 問題
+// 當 iframe 嘗試導向 accounts.google.com 時，攔截並改以新分頁開啟，登入完成後自動同步回側邊欄
+try {
+  chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
+    try {
+      // 僅處理側邊欄 iframe 內的導航（frameId !== 0 且 parentFrameId !== -1 表示非主框架）
+      if (details.frameId === 0) return;
+      const url = details.url || '';
+      const isGoogleOAuth = url.includes('accounts.google.com') && (url.includes('oauth') || url.includes('ServiceLogin') || url.includes('signin'));
+      if (!isGoogleOAuth) return;
+      // 取消 iframe 內的導航，改以新分頁開啟以避免 X-Frame 阻擋
+      // 需透過 tabs.create 在新分頁開啟，讓用戶完成 Google 授權
+      await chrome.tabs.create({ url });
+      // 嘗試取消原導航（僅對可取得 tabId 的情況）
+      // 由於 onBeforeNavigate 無法直接取消，改為在 sidepanel 中顯示提示
+      chrome.runtime.sendMessage({ type: 'oauthPopupOpened', url }).catch(() => {});
+    } catch (e) {}
+  }, { url: [{ hostContains: 'accounts.google.com' }] });
+} catch (e) {}
+
+try {
+  // 監聽新分頁完成 Google 登入後返回 deepseek，自動刷新側邊欄的 deepseek 頁面
+  chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    try {
+      if (changeInfo.status !== 'complete' || !tab.url) return;
+      // 當用戶在新開的 Google 登入分頁完成後被導回 deepseek，同步更新側邊欄
+      if (tab.url.includes('chat.deepseek.com') && tab.url.includes('code=')) {
+        const { activeSiteId, sites } = await chrome.storage.local.get(['activeSiteId', 'sites']);
+        const list = Array.isArray(sites) ? sites : [];
+        const deepseekSite = list.find(s => s.url && s.url.includes('deepseek.com'));
+        if (deepseekSite) {
+          // 保持側邊欄開啟並刷新為最新 URL（帶授權碼）
+          await chrome.storage.local.set({ activeSiteId: deepseekSite.id });
+          // 關閉授權完成的分頁（可選）
+          // chrome.tabs.remove(tabId).catch(() => {});
+        }
+      }
+    } catch (e) {}
+  });
+} catch (e) {}
+
 chrome.action.onClicked.addListener(async (tab) => {
   try {
     await chrome.sidePanel.open({ windowId: tab.windowId });
