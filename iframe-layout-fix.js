@@ -106,6 +106,8 @@
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') scheduleFix();
       });
+      const ro = new ResizeObserver(scheduleFix);
+      ro.observe(document.documentElement);
     } catch (e) {}
   };
 
@@ -114,9 +116,4 @@
   } else {
     init();
   }
-  // 若側邊欄寬度改變（拖曳），重新檢查
-  try {
-    const ro = new ResizeObserver(scheduleFix);
-    ro.observe(document.documentElement);
-  } catch (e) {}
 })();

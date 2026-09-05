@@ -3,6 +3,7 @@
   window.__sbxClipboardPatched = true;
 
   const tryPatch = () => {
+    if (tryPatch.done) return;
     try {
       if (!navigator.clipboard || !navigator.clipboard.writeText) return;
       const origWrite = navigator.clipboard.writeText.bind(navigator.clipboard);
@@ -103,6 +104,7 @@
         }
         return origExec.call(this, cmd, showUI, value);
       };
+      tryPatch.done = true;
     } catch (_) {}
   };
 

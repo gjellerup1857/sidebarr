@@ -173,7 +173,8 @@
       root.classList.add('sbx-enter');
       root.classList.remove('sbx-hidden');
       document.documentElement.classList.add('sbx-reserve');
-      // 一次性修正固定全寬頭部（空閒時），無常駐觀察器
+      // 一次性修正固定全寬頭部（僅可見分頁空閒時），無常駐觀察器
+      if (document.visibilityState !== 'visible') return;
       if ('requestIdleCallback' in window) {
         requestIdleCallback(() => fixFullWidthFixedHeaders(), { timeout: 1200 });
       } else {
@@ -294,6 +295,8 @@
       btn.draggable = true;
       const img = document.createElement('img');
       img.alt = '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
       img.src = site.favicon || DEFAULT_FAVICON;
       img.addEventListener('error', () => {
         if (!img.dataset.fb) {
@@ -705,8 +708,13 @@
     renderRail();
     renderThemeOptions();
     applyTheme();
-    initShortcut();
     show();
+    // 非關鍵的快捷鍵提示訊息（需 background 來回）延遲到空閒時，避免阻塞首屏 rail 顯示
+    const deferIdle = (fn) => {
+      if ('requestIdleCallback' in window) requestIdleCallback(() => fn(), { timeout: 2000 });
+      else setTimeout(fn, 300);
+    };
+    deferIdle(() => initShortcut());
   }
 
   init();

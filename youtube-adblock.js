@@ -32,8 +32,11 @@
     });
   };
 
-  // 極致低頻：僅在可見且非閒置時檢查
+  // 極致低頻：僅在可見且非閒置時檢查（單例守衛，避免 SPA 重複啟動造成多組 interval/observer）
+  let started = false;
   const start = () => {
+    if (started) return;
+    started = true;
     if (document.visibilityState !== 'visible') return;
     skipAd();
     try {

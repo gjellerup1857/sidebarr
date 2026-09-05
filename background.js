@@ -203,24 +203,8 @@ async function closePanel(windowId) {
     closed = true;
   } catch (e) {}
   await chrome.storage.local.set({ panelOpen: false });
-  ensurePageRail(windowId);
-  broadcastShowRail(windowId);
+  await ensurePageRail(windowId);
   return { closed };
-}
-
-async function broadcastShowRail(windowId) {
-  try {
-    // 優化：僅處理當前 active 分頁，避免對同視窗所有分頁注入造成卡頓與面板跑動
-    const query = windowId != null ? { active: true, windowId } : { active: true, lastFocusedWindow: true };
-    const tabs = await chrome.tabs.query(query);
-    const tab = tabs[0];
-    if (!tab || !tab.id || !tab.url || !/^https?:/.test(tab.url)) return;
-    try { await chrome.tabs.sendMessage(tab.id, { type: 'showRail' }); } catch (e) {}
-    try {
-      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
-      await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['content.css'] });
-    } catch (e) {}
-  } catch (e) {}
 }
 
 async function handleFullscreenEnter(sender) {
