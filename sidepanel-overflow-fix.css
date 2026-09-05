@@ -19,4 +19,58 @@
     max-width: 100% !important;
     height: auto !important;
   }
+
+  /* YouTube watch 頁 metadata 容器修正：窄視口專用，不觸碰 #columns 佈局，避免黑屏風險 */
+  ytd-watch-metadata,
+  ytd-watch-metadata #above-the-fold,
+  ytd-watch-metadata #title-row,
+  ytd-watch-metadata #top-row,
+  ytd-watch-metadata #bottom-row,
+  ytd-watch-metadata #description,
+  ytd-watch-metadata #description-inner {
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  ytd-watch-metadata #top-row {
+    flex-wrap: wrap !important;
+    align-items: flex-start !important;
+  }
+
+  ytd-watch-metadata #owner,
+  ytd-watch-metadata #actions,
+  ytd-watch-metadata #actions-inner {
+    max-width: 100% !important;
+    min-width: 0 !important;
+    flex: 1 1 100% !important;
+  }
+
+  ytd-watch-metadata #actions-inner,
+  ytd-watch-metadata #menu .top-level-buttons {
+    flex-wrap: wrap !important;
+  }
+
+  ytd-watch-metadata #title h1,
+  ytd-watch-metadata #title h1 yt-formatted-string {
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+
+  ytd-watch-metadata #title-row {
+    flex-wrap: wrap !important;
+  }
+
+  /* 桌面 watch 頁在窄視口下 #columns(#primary+#secondary) 未收縮 → 只收縮不強制 flex-direction */
+  ytd-watch-flexy,  ytd-watch-flexy #columns,
+  ytd-watch-flexy #primary,
+  ytd-watch-flexy #secondary {
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  ytd-watch-flexy #secondary {
+    display: none !important;
+  }
 }
