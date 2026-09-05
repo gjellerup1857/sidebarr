@@ -140,29 +140,40 @@ async function init() {
   }
 }
 
-function renderRail() {
-  siteList.innerHTML = '';
-  sites.forEach((site) => {
+const railButtons = new Map();
+const faviconCache = new Map();
+
+function resolveFaviconSrc(site) {
+  const hit = faviconCache.get(site.url);
+  if (hit) return hit;
+  let src = DEFAULT_FAVICON;
+  try {
+    if (site.url && !site.url.startsWith('chrome-extension://')) {
+      src = 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(new URL(site.url).hostname) + '&sz=64';
+    }
+  } catch (e) {}
+  return src;
+}
+
+function createSiteButton(site) {
     const btn = document.createElement('button');
     btn.className = 'site-btn' + (activeSiteId === site.id ? ' active' : '');
     btn.title = site.name;
     btn.draggable = true;
     const img = document.createElement('img');
     img.alt = '';
+    img.loading = 'lazy';
+    img.decoding = 'async';
     img.src = site.favicon || DEFAULT_FAVICON;
+    img.addEventListener('load', () => {
+      if (img.dataset.fb) faviconCache.set(site.url, img.currentSrc || img.src);
+    });
     img.addEventListener('error', () => {
       if (!img.dataset.fb) {
         img.dataset.fb = '1';
-        try {
-          if (site.url && site.url.startsWith('chrome-extension://')) {
-            img.src = DEFAULT_FAVICON;
-          } else {
-            img.src = 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(new URL(site.url).hostname) + '&sz=64';
-          }
-        } catch (e) {
-          img.src = DEFAULT_FAVICON;
-        }
+        img.src = resolveFaviconSrc(site);
       } else {
+        faviconCache.set(site.url, DEFAULT_FAVICON);
         img.src = DEFAULT_FAVICON;
       }
     });
@@ -193,8 +204,28 @@ function renderRail() {
       const after = e.clientY > btn.getBoundingClientRect().top + btn.offsetHeight / 2;
       reorderSite(dragId, site.id, after);
     });
+    return btn;
+}
+
+function renderRail() {
+  const seen = new Set();
+  sites.forEach((site) => {
+    seen.add(site.id);
+    let btn = railButtons.get(site.id);
+    if (!btn) {
+      btn = createSiteButton(site);
+      railButtons.set(site.id, btn);
+    }
+    btn.classList.toggle('active', activeSiteId === site.id);
+    btn.title = site.name;
     siteList.appendChild(btn);
   });
+  for (const [id, btn] of railButtons) {
+    if (!seen.has(id)) {
+      btn.remove();
+      railButtons.delete(id);
+    }
+  }
 }
 
 function clearDrag() {

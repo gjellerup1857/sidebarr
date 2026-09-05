@@ -203,7 +203,9 @@ async function closePanel(windowId) {
     closed = true;
   } catch (e) {}
   await chrome.storage.local.set({ panelOpen: false });
-  await ensurePageRail(windowId);
+  if (!closed) {
+    await ensurePageRail(windowId);
+  }
   return { closed };
 }
 

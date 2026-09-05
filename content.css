@@ -35,7 +35,7 @@
   opacity: 0;
   pointer-events: none;
   transform: translateX(100%);
-  transition: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
 html.sbx-reserve {
@@ -43,11 +43,10 @@ html.sbx-reserve {
   scrollbar-gutter: stable;
 }
 
-/* 僅保留 margin-right 讓文件流內容避讓，不再覆寫 max-width 與 100vw 元素，
-   避免破壞 Gemini/Google/YouTube 等使用 100vw 或 fixed 佈局的站點 */
 html.sbx-reserve body {
   margin-right: var(--sbx-rail-width) !important;
   box-sizing: border-box !important;
+  transition: margin-right 0.18s ease;
 }
 
 #sbx-rail-root *,

@@ -282,13 +282,22 @@
     }
   })();
 
-  async function renderRail() {
-    siteList.innerHTML = '';
-    const BATCH = 20;
-    for (let i = 0; i < sites.length; i += BATCH) {
-      const batch = sites.slice(i, i + BATCH);
-      await new Promise(r => requestAnimationFrame(() => {
-        batch.forEach((site) => {
+  const railButtons = new Map();
+  const faviconCache = new Map();
+
+  function resolveFaviconSrc(site) {
+    const hit = faviconCache.get(site.url);
+    if (hit) return hit;
+    let src = DEFAULT_FAVICON;
+    try {
+      if (site.url && !site.url.startsWith('chrome-extension://')) {
+        src = 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(new URL(site.url).hostname) + '&sz=64';
+      }
+    } catch (e) {}
+    return src;
+  }
+
+  function createSiteButton(site) {
       const btn = document.createElement('button');
       btn.className = 'sbx-site-btn' + (activeSiteId === site.id ? ' sbx-active' : '');
       btn.title = site.name;
@@ -298,19 +307,15 @@
       img.loading = 'lazy';
       img.decoding = 'async';
       img.src = site.favicon || DEFAULT_FAVICON;
+      img.addEventListener('load', () => {
+        if (img.dataset.fb) faviconCache.set(site.url, img.currentSrc || img.src);
+      });
       img.addEventListener('error', () => {
         if (!img.dataset.fb) {
           img.dataset.fb = '1';
-          try {
-            if (site.url && site.url.startsWith('chrome-extension://')) {
-              img.src = DEFAULT_FAVICON;
-            } else {
-              img.src = 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(new URL(site.url).hostname) + '&sz=64';
-            }
-          } catch (e) {
-            img.src = DEFAULT_FAVICON;
-          }
+          img.src = resolveFaviconSrc(site);
         } else {
+          faviconCache.set(site.url, DEFAULT_FAVICON);
           img.src = DEFAULT_FAVICON;
         }
       });
@@ -341,11 +346,41 @@
         const after = e.clientY > btn.getBoundingClientRect().top + btn.offsetHeight / 2;
         reorderSite(dragId, site.id, after);
       });
-      siteList.appendChild(btn);
-        });
-        r();
-      }));
-      if (globalThis.scheduler?.yield) await scheduler.yield();
+      return btn;
+  }
+
+  async function renderRail() {
+    if (renderRail.busy) return;
+    renderRail.busy = true;
+    try {
+      const seen = new Set();
+      const BATCH = 20;
+      for (let i = 0; i < sites.length; i += BATCH) {
+        const batch = sites.slice(i, i + BATCH);
+        await new Promise(r => requestAnimationFrame(() => {
+          batch.forEach((site) => {
+            seen.add(site.id);
+            let btn = railButtons.get(site.id);
+            if (!btn) {
+              btn = createSiteButton(site);
+              railButtons.set(site.id, btn);
+            }
+            btn.classList.toggle('sbx-active', activeSiteId === site.id);
+            btn.title = site.name;
+            siteList.appendChild(btn);
+          });
+          r();
+        }));
+        if (globalThis.scheduler?.yield) await scheduler.yield();
+      }
+      for (const [id, btn] of railButtons) {
+        if (!seen.has(id)) {
+          btn.remove();
+          railButtons.delete(id);
+        }
+      }
+    } finally {
+      renderRail.busy = false;
     }
   }
 
@@ -657,6 +692,7 @@
       if (msg && msg.type === 'showRail') {
         panelOpen = false;
         isFullscreenHidden = false;
+        if (railButtons.size === 0 && sites.length > 0) renderRail();
         show();
         sendResponse({ ok: true });
         return true;
@@ -669,15 +705,20 @@
     try {
       if (changes.sites) {
         sites = toSites(changes.sites.newValue);
-        renderRail();
+        if (!panelOpen) renderRail();
       }
       if (changes.activeSiteId) {
         activeSiteId = changes.activeSiteId.newValue || null;
-        renderRail();
+        if (!panelOpen) renderRail();
       }
       if (changes.panelOpen) {
         panelOpen = !!changes.panelOpen.newValue;
-        show();
+        if (panelOpen) {
+          show();
+        } else {
+          renderRail();
+          show();
+        }
       }
       if (changes.theme) theme = changes.theme.newValue;
       if (changes.customColor) customColor = changes.customColor.newValue || '#f2f3f5';
@@ -705,9 +746,11 @@
       panelOpen = !!res.panelOpen;
       shortcut = res.shortcut || '';
     } catch (e) {}
-    renderRail();
     renderThemeOptions();
     applyTheme();
+    if (!panelOpen) {
+      renderRail();
+    }
     show();
     // 非關鍵的快捷鍵提示訊息（需 background 來回）延遲到空閒時，避免阻塞首屏 rail 顯示
     const deferIdle = (fn) => {
