@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Sidebarr 瀏覽器側邊欄工具",
-  "version": "2026.0.37",
+  "version": "2026.0.38",
   "description": "頁面內建常駐面板列，一鍵加入常用網站並在側邊欄開啟，面板列永遠停靠瀏覽器最右側",
   "permissions": [
     "storage",

@@ -198,20 +198,39 @@
       return;
     }
     try {
-      const headers = document.querySelectorAll('header, nav');
-      for (const el of headers) {
+      const selector = 'header, nav, [role="banner"], [class*="fixed"], [class*="sticky"], [class*="navbar"], [class*="toolbar"], [style*="fixed"], [style*="sticky"]';
+      const nodes = document.querySelectorAll(selector);
+      for (const el of nodes) {
         if (el.id === 'sbx-rail-root' || (el.closest && el.closest('#sbx-rail-root'))) continue;
         if (fixedAdjusted.has(el)) continue;
         const s = getComputedStyle(el);
         if (s.position !== 'fixed' && s.position !== 'sticky') continue;
+        if (s.display === 'none' || s.visibility === 'hidden') continue;
         const r = el.getBoundingClientRect();
         if (r.width < window.innerWidth * 0.5) continue;
+        if (r.right < 0) continue;
         if (Math.abs(r.right - window.innerWidth) > 5) continue;
         const original = el.style.getPropertyValue('right');
         fixedAdjusted.set(el, original || '');
         el.style.setProperty('right', '44px', 'important');
       }
     } catch (e) {}
+  }
+
+  let fixedResizeTimer = null;
+  function setupFixedHeaderWatcher() {
+    if (fixedResizeTimer === null) {
+      fixedResizeTimer = 0;
+      window.addEventListener('resize', () => {
+        if (panelOpen || isFullscreenHidden || document.visibilityState !== 'visible') return;
+        clearTimeout(fixedResizeTimer);
+        fixedResizeTimer = setTimeout(() => fixFullWidthFixedHeaders(), 500);
+      });
+      window.addEventListener('load', () => {
+        if (panelOpen || isFullscreenHidden || document.visibilityState !== 'visible') return;
+        setTimeout(() => fixFullWidthFixedHeaders(), 600);
+      });
+    }
   }
 
   function getFullscreenElement() {
@@ -751,6 +770,7 @@
     if (!panelOpen) {
       renderRail();
     }
+    setupFixedHeaderWatcher();
     show();
     // 非關鍵的快捷鍵提示訊息（需 background 來回）延遲到空閒時，避免阻塞首屏 rail 顯示
     const deferIdle = (fn) => {

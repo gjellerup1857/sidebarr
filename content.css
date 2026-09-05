@@ -49,6 +49,16 @@ html.sbx-reserve body {
   transition: margin-right 0.18s ease;
 }
 
+/* 後備：固定全寬頭部避免被 rail 遮擋右緣 */
+html.sbx-reserve header,
+html.sbx-reserve nav,
+html.sbx-reserve [role="banner"],
+html.sbx-reserve [class*="navbar"],
+html.sbx-reserve [class*="toolbar"] {
+  right: var(--sbx-rail-width) !important;
+  max-width: calc(100vw - var(--sbx-rail-width)) !important;
+}
+
 #sbx-rail-root *,
 #sbx-rail-root *::before,
 #sbx-rail-root *::after {
