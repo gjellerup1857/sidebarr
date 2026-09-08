@@ -210,6 +210,8 @@
         if (r.width < window.innerWidth * 0.5) continue;
         if (r.right < 0) continue;
         if (Math.abs(r.right - window.innerWidth) > 5) continue;
+        if (r.height > window.innerHeight * 0.6) continue;
+        if (r.top > window.innerHeight * 0.3) continue;
         const original = el.style.getPropertyValue('right');
         fixedAdjusted.set(el, original || '');
         el.style.setProperty('right', '44px', 'important');
