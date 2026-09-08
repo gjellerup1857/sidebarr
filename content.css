@@ -48,14 +48,6 @@ html.sbx-reserve body {
   transition: margin-right 0.18s ease;
 }
 
-/* 後備：僅語意標籤導航（全寬 header/nav/banner），避免 [class*=] 誤傷子元素 */
-html.sbx-reserve header,
-html.sbx-reserve nav,
-html.sbx-reserve [role="banner"] {
-  right: var(--sbx-rail-width) !important;
-  max-width: calc(100vw - var(--sbx-rail-width)) !important;
-}
-
 #sbx-rail-root *,
 #sbx-rail-root *::before,
 #sbx-rail-root *::after {
